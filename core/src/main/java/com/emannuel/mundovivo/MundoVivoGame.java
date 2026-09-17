@@ -6,6 +6,7 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.input.GestureDetector;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.emannuel.mundovivo.render.CameraController;
 import com.emannuel.mundovivo.render.CreatureRenderer;
@@ -26,6 +27,12 @@ import com.emannuel.mundovivo.sim.world.WorldGenerator;
  *
  * <p>Toque longo gera um mundo novo. É um atalho de desenvolvimento para
  * avaliar muitas sementes rápido; sai quando a interface de verdade entrar.
+ *
+ * <p>Toque simples fere a criatura tocada. É o primeiro poder do jogador, e
+ * é aqui que as três peças se encontram: a câmera converte tela em mundo, o
+ * {@link WorldRenderer} converte mundo em tile, e a simulação resolve o
+ * resto. Sem seleção de poder, sem espera, sem custo — um poder só, para
+ * provar o caminho inteiro antes de existir interface para escolher outro.
  */
 public final class MundoVivoGame extends ApplicationAdapter {
 
@@ -39,6 +46,13 @@ public final class MundoVivoGame extends ApplicationAdapter {
     /** O enquadramento inicial só acontece uma vez; girar a tela não deve resetar o zoom. */
     private boolean framed;
 
+    /**
+     * Reaproveitado a cada toque em vez de alocado: {@code unproject}
+     * escreve no vetor que recebe, e o resto do jogo evita lixo por quadro
+     * pelo mesmo motivo.
+     */
+    private final Vector3 touchPoint = new Vector3();
+
     @Override
     public void create() {
         batch = new SpriteBatch();
@@ -49,6 +63,7 @@ public final class MundoVivoGame extends ApplicationAdapter {
         controller = new CameraController(
                 camera, worldRenderer.worldPixelWidth(), worldRenderer.worldPixelHeight());
         controller.onLongPress(this::regenerate);
+        controller.onTap(this::strikeAt);
 
         Gdx.input.setInputProcessor(new InputMultiplexer(new GestureDetector(controller), controller));
     }
@@ -64,6 +79,30 @@ public final class MundoVivoGame extends ApplicationAdapter {
                 + " seed=" + seed
                 + " terra=" + Math.round(world.landFraction() * 100f) + "%"
                 + " populacao=" + simulation.population());
+    }
+
+    /**
+     * Fere a criatura no tile tocado, se houver alguma.
+     *
+     * <p>O caminho completo do dedo até a simulação: a coordenada chega em
+     * pixels de tela, a câmera a converte para coordenada de mundo levando
+     * em conta arraste e zoom atuais, o renderizador a converte para tile
+     * desfazendo a inversão vertical do desenho, e a simulação procura
+     * quem está ali.
+     *
+     * <p>Toque no vazio, no mar ou fora do mundo não faz nada — e não é
+     * erro. Errar o alvo é parte de mirar.
+     *
+     * @param screenX coordenada X do toque, em pixels de tela
+     * @param screenY coordenada Y do toque, em pixels de tela
+     */
+    private void strikeAt(float screenX, float screenY) {
+        touchPoint.set(screenX, screenY, 0f);
+        camera.unproject(touchPoint);
+
+        simulation.strikeAt(
+                worldRenderer.tileX(touchPoint.x),
+                worldRenderer.tileY(touchPoint.y));
     }
 
     /** Descarta o mundo atual e gera outro com uma semente nova. */

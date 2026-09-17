@@ -4,6 +4,7 @@ import com.emannuel.mundovivo.sim.creature.Creature;
 import com.emannuel.mundovivo.sim.creature.CreatureConfig;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
+import com.emannuel.mundovivo.render.TileMapping;
 import com.emannuel.mundovivo.sim.world.TileType;
 import com.emannuel.mundovivo.sim.world.World;
 import com.emannuel.mundovivo.sim.world.WorldConfig;
@@ -19,6 +20,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimulationTest {
@@ -319,6 +321,130 @@ class SimulationTest {
 
         assertEquals(0L, sim.deathsByExternalDamage(),
                 "criatura sofreu dano de terreno em um mundo gerado normalmente");
+    }
+
+    // ------------------------------------------------------ golpe do jogador
+
+    @Test
+    @DisplayName("o golpe fere a criatura que está no tile tocado")
+    void strikeDamagesTheCreatureOnThatTile() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        Creature c = sim.creatures().activeAt(0);
+
+        Creature hit = sim.strikeAt(c.tileX(), c.tileY());
+
+        assertAll(
+                () -> assertSame(c, hit, "o golpe devolveu outra criatura"),
+                () -> assertEquals(1f - sim.config().playerStrikeDamage, c.health, 1e-6f),
+                () -> assertEquals(Creature.CAUSE_PLAYER_STRIKE, c.lastDamageCause),
+                () -> assertEquals(1, sim.population(), "um golpe só não deveria matar")
+        );
+    }
+
+    @Test
+    @DisplayName("golpes repetidos matam pelo mesmo caminho de morte da fome e do terreno")
+    void repeatedStrikesKillThroughTheSharedDeathPath() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        Creature c = sim.creatures().activeAt(0);
+        int tileX = c.tileX();
+        int tileY = c.tileY();
+        int tile = sim.world().index(tileX, tileY);
+
+        // Rebrota desligada e tile esvaziado: a comida que aparecer ali
+        // depois disso só pode ter vindo do cadáver — é assim que se prova
+        // que a morte saiu pelo die() compartilhado, e não por um caminho
+        // próprio do golpe.
+        sim.foodMap().regrowthPerSecond(0f);
+        sim.foodMap().consume(tile, 999f);
+
+        int strikes = 0;
+        while (sim.population() > 0 && strikes < 10) {
+            sim.strikeAt(tileX, tileY);
+            strikes++;
+        }
+
+        assertAll(
+                () -> assertEquals(0, sim.population(), "não morreu depois de 10 golpes"),
+                () -> assertEquals(1L, sim.deathsByExternalDamage()),
+                () -> assertEquals(0L, sim.deathsByStarvation(), "morte creditada à fome"),
+                () -> assertEquals(0L, sim.deathsByOldAge(), "morte creditada à velhice"),
+                () -> assertEquals(sim.config().corpseFoodValue,
+                        sim.foodMap().amountAt(tile), 1e-6f,
+                        "a morte por golpe não depositou cadáver no tile"),
+                () -> assertEquals(Creature.CAUSE_PLAYER_STRIKE, c.lastDamageCause)
+        );
+    }
+
+    @Test
+    @DisplayName("golpe em tile vazio não muda nada e não estoura")
+    void strikeOnEmptyTileChangesNothing() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        Creature c = sim.creatures().activeAt(0);
+        float healthBefore = c.health;
+
+        // Um tile qualquer que não é o dela — o mundo do teste tem 9x9 e ela
+        // ocupa um só.
+        int otherX = (c.tileX() + 3) % sim.world().width();
+        int otherY = (c.tileY() + 3) % sim.world().height();
+        Creature hit = sim.strikeAt(otherX, otherY);
+
+        assertAll(
+                () -> assertNull(hit, "achou alguém em um tile vazio"),
+                () -> assertEquals(1, sim.population()),
+                () -> assertEquals(healthBefore, c.health, 0f),
+                () -> assertNull(c.lastDamageCause, "levou dano sem ter sido tocada"),
+                () -> assertEquals(0L, sim.deathsByExternalDamage())
+        );
+    }
+
+    @Test
+    @DisplayName("golpe fora do mundo é ignorado sem exceção")
+    void strikeOutsideTheWorldIsIgnored() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        Creature c = sim.creatures().activeAt(0);
+        World world = sim.world();
+
+        assertAll(
+                () -> assertNull(sim.strikeAt(-1, 0)),
+                () -> assertNull(sim.strikeAt(0, -1)),
+                () -> assertNull(sim.strikeAt(world.width(), 0)),
+                () -> assertNull(sim.strikeAt(0, world.height())),
+                () -> assertEquals(1, sim.population()),
+                () -> assertEquals(1f, c.health, 0f)
+        );
+    }
+
+    /**
+     * O cano inteiro que este sistema existe para provar, menos a câmera.
+     *
+     * <p>Pega onde a criatura é desenhada, converte essa coordenada de
+     * mundo de volta para tile pela mesma conversão que o jogo usa, e
+     * golpeia o tile resultante. Se a conversão estiver invertida ou
+     * deslocada, o golpe erra e a criatura sai ilesa.
+     *
+     * <p>O trecho que falta — tela para mundo — é {@code camera.unproject},
+     * aritmética do próprio libGDX, que depende de {@code Gdx.graphics} e
+     * não roda em teste sem backend.
+     */
+    @Test
+    @DisplayName("a coordenada onde a criatura é desenhada, convertida de volta, acerta ela")
+    void tapOnTheDrawnPositionHitsThatCreature() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        Creature c = sim.creatures().activeAt(0);
+
+        float worldPixelHeight = sim.world().height() * TileMapping.TILE_SIZE;
+        float drawnX = c.x * TileMapping.TILE_SIZE;
+        float drawnY = worldPixelHeight - c.y * TileMapping.TILE_SIZE;
+
+        int tappedX = TileMapping.tileX(drawnX);
+        int tappedY = TileMapping.tileY(drawnY, sim.world().height());
+
+        assertAll(
+                () -> assertEquals(c.tileX(), tappedX, "coluna convertida errada"),
+                () -> assertEquals(c.tileY(), tappedY, "linha convertida errada"),
+                () -> assertSame(c, sim.strikeAt(tappedX, tappedY),
+                        "o toque na posição desenhada não encontrou a criatura")
+        );
     }
 
     // ------------------------------------------------------------ facções

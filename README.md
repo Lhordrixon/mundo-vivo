@@ -29,6 +29,7 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 7. IA de guerra | não começou |
 | 8. Passo de otimização e medição de FPS | não começou |
 | 9. Dano externo e terreno perigoso | pronto e testado |
+| 10. Primeiro poder do jogador: toque que fere | pronto e testado |
 
 O que roda hoje: o app abre, gera um mundo de 256x192 tiles, espalha 120
 criaturas pela terra firme e as deixa viver. Elas procuram comida, comem,
@@ -47,6 +48,12 @@ facção, recalculado algumas vezes por segundo. Isso ainda não aparece na
 tela: não há bandeira, nem cor de facção, nem fronteira desenhada. É
 território no sentido de dado da simulação, pronto para o sistema de
 guerra usar; a parte visual fica para quando `render/` for a vez.
+
+Toque simples fere a criatura tocada: é o primeiro poder do jogador e a
+primeira vez que um gesto muda a simulação em vez de só mover a câmera.
+Três toques matam. Não há seleção de poder, espera nem custo — é um poder
+só, escolhido para provar o caminho do dedo até a criatura antes de
+existir interface para escolher outro.
 
 Toque longo descarta o mundo e gera outro — atalho de desenvolvimento, sai
 quando a interface de verdade entrar.
@@ -120,6 +127,7 @@ core/
     faction/   registro de facções e território por proximidade
     util/      RNG determinístico
   render/      desenho e câmera — a única parte que conhece libGDX
+               (menos TileMapping: aritmética pura, para ser testável)
 android/       launcher e empacotamento do APK
 desktop/       launcher para rodar no PC
 tools/         ferramentas de apoio em Java puro
@@ -252,6 +260,47 @@ virou água no mapa de comida não deixa cadáver aproveitável, porque
 zero. O corpo afunda. É regra antiga do `FoodMap`, não do dano, mas só
 agora ficou alcançável.
 
+### Como o toque do jogador chega na criatura
+
+O primeiro gesto que muda o mundo em vez de mover a câmera. Toque simples
+fere quem estiver no tile tocado; três toques matam. Nada além disso: sem
+barra de poderes, sem escolher qual poder, sem espera nem custo. Um poder
+só, de propósito — o que estava faltando não era variedade, era a ligação.
+
+O caminho tem quatro trechos, e cada um pertence a uma camada diferente:
+
+| Trecho | Quem faz | Testável sem tela? |
+|---|---|---|
+| dedo → coordenada de tela | `GestureDetector` do libGDX | não, e não é nosso |
+| tela → coordenada de mundo | `camera.unproject` | não: depende de `Gdx.graphics` |
+| mundo → tile | `TileMapping` | **sim** |
+| tile → criatura ferida | `Simulation.strikeAt` | **sim** |
+
+`CameraController` ganhou um `onTap` no mesmo molde do `onLongPress` que já
+existia, e entrega a coordenada crua, em pixels de tela. Ele move câmera e
+não sabe o que existe no mundo; quem junta câmera, renderizador e simulação
+é o `MundoVivoGame`, que já tinha os três na mão.
+
+**Por que `TileMapping` saiu de dentro do `WorldRenderer`.** A conta é
+aritmética e não toca em nada gráfico, mas o `WorldRenderer` carrega um
+`Pixmap` e uma `Texture` no construtor, que exigem biblioteca nativa e
+contexto de vídeo — enquanto a conta morasse lá, nenhum teste a alcançava
+sem abrir uma janela, e a orientação do mapa seguia sendo a dívida que o
+próprio README registrava. `WorldRenderer.tileX` e `tileY` continuam
+existindo e continuam sendo o que o jogo chama; passaram a delegar.
+
+O teste que interessa não confere a fórmula contra ela mesma: ele pega a
+coordenada onde o `CreatureRenderer` desenha uma criatura e converte de
+volta, linha por linha, exigindo que volte ao mesmo tile. Se desenho e
+toque discordarem, o jogador mira em um bicho e acerta outro — e esse é
+exatamente o erro que uma conferência de fórmula isolada deixaria passar.
+
+O golpe não inventa caminho de morte: chama o mesmo `applyDamage` que fome
+e terreno usam, com causa própria (`CAUSE_PLAYER_STRIKE`), e a morte sai
+pelo mesmo ponto de sempre — cadáver vira comida, sai da facção, slot volta
+ao pool. Tocar no mar, no vazio ou fora do mundo não faz nada e não é erro:
+errar o alvo é parte de mirar.
+
 ### Como funcionam facções e território
 
 Toda criatura pertence a uma facção. A população inicial funda uma facção
@@ -339,7 +388,7 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 
 - Todo o código, incluindo `render/` e os dois launchers, compila com
   `-Xlint:all` sem um único aviso.
-- As 65 verificações de `SimSelfTest` passam. Mundo: determinismo por
+- As 69 verificações de `SimSelfTest` passam. Mundo: determinismo por
   semente, sementes diferentes divergindo, todo tile com tipo válido,
   elevação sempre em [0,1], proporção terra/mar jogável em 6 sementes,
   presença de oceano profundo e de montanha, geração em 18 ms. Comida:
@@ -355,7 +404,9 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   vida para em zero, cadáver não morre duas vezes, dano não positivo
   ignorado, causa não vaza entre duas vidas do mesmo slot, criatura em
   terreno perigoso definha e morre, criatura em terreno normal não, só o
-  oceano profundo é perigoso.
+  oceano profundo é perigoso, golpe do jogador fere quem está no tile,
+  golpes repetidos matam pelo caminho de morte compartilhado, golpe em
+  tile vazio e golpe fora do mundo não fazem nada nem estouram.
   Simulação: mesma semente com a mesma história criatura por criatura
   (facção incluída), ninguém saindo do mundo nem pisando na água, fome e
   vida sempre em [0,1], passo gigante cortado, comida caindo com o
@@ -385,7 +436,11 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 - A camada `render/` compilou contra *stubs* da API do libGDX escritos à
   mão, não contra o libGDX real. Isso pega erro de sintaxe, import faltando
   e método de interface não implementado — mas **não** garante que as
-  assinaturas batem com as do libGDX 1.14.2.
+  assinaturas batem com as do libGDX 1.14.2. Duas exceções agora têm
+  teste de verdade rodando no CI: `TileMapping`, que não importa libGDX
+  nenhum, e `CameraController`, cujo teste cobre toque, arraste e pinça
+  sem tocar em matriz — a multiplicação de matriz do libGDX é nativa e
+  não carrega em teste sem backend, então `resize()` fica de fora.
 - O jogo nunca foi executado. Não há medição de FPS real, nem confirmação
   de que o `flipY` da textura deixa o mapa na orientação certa na tela — e
   a mesma dúvida vale para a posição das criaturas, que usam a mesma

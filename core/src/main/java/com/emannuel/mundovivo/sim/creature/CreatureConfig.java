@@ -50,6 +50,20 @@ public final class CreatureConfig {
      */
     public float hazardDamagePerSecond = 0.5f;
 
+    /**
+     * Vida tirada por um toque do jogador sobre uma criatura.
+     *
+     * <p>Único número deste arquivo que <b>não</b> é por segundo: o golpe é
+     * instantâneo, não um processo. Por isso o nome não termina em
+     * {@code PerSecond} — se um dia terminar, alguém vai multiplicar por
+     * {@code dt} sem pensar e o poder vira cócega.
+     *
+     * <p>0.34 mata em três toques. Dois seria pouco para o jogador
+     * perceber que acertou antes de o bicho sumir; muitos mais tornariam
+     * matar de propósito um exercício de paciência.
+     */
+    public float playerStrikeDamage = 0.34f;
+
     /** Ganho de vida por segundo quando bem alimentada. */
     public float healthRegenPerSecond = 0.04f;
 
@@ -127,6 +141,7 @@ public final class CreatureConfig {
         c.hungerPerSecond = hungerPerSecond;
         c.starvationDamagePerSecond = starvationDamagePerSecond;
         c.hazardDamagePerSecond = hazardDamagePerSecond;
+        c.playerStrikeDamage = playerStrikeDamage;
         c.healthRegenPerSecond = healthRegenPerSecond;
         c.eatingRate = eatingRate;
         c.hungerReliefPerFood = hungerReliefPerFood;
@@ -154,6 +169,8 @@ public final class CreatureConfig {
         require(hungerPerSecond > 0f, "hungerPerSecond deve ser > 0");
         require(hazardDamagePerSecond >= 0f,
                 "hazardDamagePerSecond não pode ser negativa, senão terreno perigoso cura");
+        require(playerStrikeDamage >= 0f,
+                "playerStrikeDamage não pode ser negativa, senão o golpe cura");
         require(hungerFullThreshold < hungerSeekThreshold,
                 "hungerFullThreshold precisa ser menor que hungerSeekThreshold, "
                         + "senão a criatura nunca para de comer nem nunca começa");

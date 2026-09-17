@@ -36,6 +36,9 @@ public final class CameraController extends InputAdapter implements GestureDetec
     /** Chamado no toque longo. Opcional — pode ser {@code null}. */
     private Runnable onLongPress;
 
+    /** Chamado no toque simples, com a coordenada tocada. Opcional. */
+    private TapListener onTap;
+
     private float maxZoom = 1f;
     private float zoomAtGestureStart = 1f;
 
@@ -48,6 +51,18 @@ public final class CameraController extends InputAdapter implements GestureDetec
 
     public void onLongPress(Runnable action) {
         this.onLongPress = action;
+    }
+
+    /**
+     * Registra quem recebe o toque simples.
+     *
+     * <p>A coordenada sai daqui como veio do detector de gestos, em
+     * pixels de tela. Esta classe move câmera e não sabe o que existe no
+     * mundo — traduzir toque em alvo é trabalho de quem tem a câmera e a
+     * simulação na mão, não dela.
+     */
+    public void onTap(TapListener action) {
+        this.onTap = action;
     }
 
     public OrthographicCamera camera() {
@@ -145,6 +160,10 @@ public final class CameraController extends InputAdapter implements GestureDetec
 
     @Override
     public boolean tap(float x, float y, int count, int button) {
+        if (onTap != null) {
+            onTap.onTap(x, y);
+            return true;
+        }
         return false;
     }
 

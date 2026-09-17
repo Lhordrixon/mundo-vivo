@@ -196,15 +196,7 @@ public final class Simulation {
             c.applyDamage(config.hazardDamagePerSecond * dt, Creature.CAUSE_HAZARDOUS_TERRAIN);
         }
 
-        if (c.health <= 0f) {
-            // Um único ponto de morte por vida zerada, seja qual for a
-            // causa: a estatística é que se separa, não o caminho.
-            if (Creature.CAUSE_STARVATION.equals(c.lastDamageCause)) {
-                deathsByStarvation++;
-            } else {
-                deathsByExternalDamage++;
-            }
-            die(c);
+        if (resolveDeathFromDamage(c)) {
             return;
         }
         if (c.age >= config.maxAgeSeconds) {
@@ -326,6 +318,71 @@ public final class Simulation {
             child.factionId = childFaction;
             factions.join(childFaction);
         }
+    }
+
+    // --------------------------------------------------------- poder do jogador
+
+    /**
+     * Golpe do jogador sobre um tile.
+     *
+     * <p>Primeiro caminho do jogo em que algo de fora da simulação alcança
+     * uma criatura. Não inventa nada: usa a mesma porta de dano que a fome
+     * e o terreno já usam, com causa própria, e a morte sai pelo mesmo
+     * ponto de sempre.
+     *
+     * <p>Acerta <b>uma</b> criatura por toque — a primeira encontrada no
+     * tile. Duas criaturas podem ocupar o mesmo tile, e escolher a primeira
+     * é arbitrário, mas determinístico enquanto a ordem da lista de ativos
+     * for determinística, que é o que os testes de determinismo garantem.
+     *
+     * <p>Tile fora do mundo ou tile vazio não são erro: não acontece nada e
+     * o retorno é {@code null}. Tocar no oceano é um gesto legítimo do
+     * jogador, não uma exceção.
+     *
+     * <p><b>Quando chamar.</b> Entre passos, a partir do tratamento de
+     * entrada — nunca de dentro do laço de {@link #step(float)}. Um golpe
+     * fatal remove a criatura do pool por troca com a última, e isso
+     * embaralharia uma iteração em curso.
+     *
+     * @return a criatura atingida, que pode já estar morta se o golpe foi
+     *         fatal, ou {@code null} se não havia ninguém ali
+     */
+    public Creature strikeAt(int tileX, int tileY) {
+        if (!world.inBounds(tileX, tileY)) {
+            return null;
+        }
+        for (int i = 0, n = pool.activeCount(); i < n; i++) {
+            Creature c = pool.activeAt(i);
+            if (c.tileX() == tileX && c.tileY() == tileY) {
+                c.applyDamage(config.playerStrikeDamage, Creature.CAUSE_PLAYER_STRIKE);
+                resolveDeathFromDamage(c);
+                return c;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Mata a criatura se a vida chegou a zero, e credita a morte à causa do
+     * último dano.
+     *
+     * <p>O único lugar do jogo que transforma vida zerada em morte. Fome,
+     * terreno e golpe do jogador passam todos por aqui: a estatística é que
+     * se separa, não o caminho.
+     *
+     * @return {@code true} se a criatura morreu nesta chamada
+     */
+    private boolean resolveDeathFromDamage(Creature c) {
+        if (c.health > 0f) {
+            return false;
+        }
+        if (Creature.CAUSE_STARVATION.equals(c.lastDamageCause)) {
+            deathsByStarvation++;
+        } else {
+            deathsByExternalDamage++;
+        }
+        die(c);
+        return true;
     }
 
     private void die(Creature c) {

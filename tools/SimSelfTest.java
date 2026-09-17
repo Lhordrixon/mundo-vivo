@@ -97,6 +97,10 @@ public final class SimSelfTest {
         deathByHazardStillLeavesACorpse();
         safeTerrainDoesNoDamage();
         onlyDeepOceanIsHazardous();
+        strikeDamagesCreatureOnThatTile();
+        repeatedStrikesKillThroughTheSharedDeathPath();
+        strikeOnEmptyTileChangesNothing();
+        strikeOutsideTheWorldIsIgnored();
 
         System.out.println("\n-- Simulation --");
         simulationIsDeterministic();
@@ -1019,6 +1023,91 @@ public final class SimSelfTest {
         check("mundo gerado normal não produz morte por dano externo",
                 sim.deathsByExternalDamage() == 0L,
                 sim.deathsByExternalDamage() + " mortes por dano de terreno");
+    }
+
+    private static void strikeDamagesCreatureOnThatTile() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        if (sim.population() != 1) {
+            check("o golpe fere a criatura no tile tocado", false, "ninguém no mundo");
+            return;
+        }
+        Creature c = sim.creatures().activeAt(0);
+        Creature hit = sim.strikeAt(c.tileX(), c.tileY());
+
+        check("o golpe fere a criatura que está no tile tocado",
+                hit == c
+                        && Math.abs(c.health - (1f - sim.config().playerStrikeDamage)) < 1e-6f
+                        && Creature.CAUSE_PLAYER_STRIKE.equals(c.lastDamageCause)
+                        && sim.population() == 1,
+                "vida=" + c.health + " causa=" + c.lastDamageCause + " pop=" + sim.population());
+    }
+
+    private static void repeatedStrikesKillThroughTheSharedDeathPath() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        if (sim.population() != 1) {
+            check("golpes repetidos matam pelo caminho compartilhado", false, "ninguém no mundo");
+            return;
+        }
+        Creature c = sim.creatures().activeAt(0);
+        int tileX = c.tileX();
+        int tileY = c.tileY();
+        int tile = sim.world().index(tileX, tileY);
+
+        // Sem rebrota e com o tile vazio, a comida que aparecer ali só pode
+        // ter vindo do cadáver — prova que a morte saiu pelo die() de sempre.
+        sim.foodMap().regrowthPerSecond(0f);
+        sim.foodMap().consume(tile, 999f);
+
+        int strikes = 0;
+        while (sim.population() > 0 && strikes < 10) {
+            sim.strikeAt(tileX, tileY);
+            strikes++;
+        }
+
+        check("golpes repetidos matam pelo mesmo caminho de morte da fome e do terreno",
+                sim.population() == 0
+                        && sim.deathsByExternalDamage() == 1L
+                        && sim.deathsByStarvation() == 0L
+                        && sim.deathsByOldAge() == 0L
+                        && Math.abs(sim.foodMap().amountAt(tile) - sim.config().corpseFoodValue) < 1e-6f,
+                "pop=" + sim.population() + " externas=" + sim.deathsByExternalDamage()
+                        + " comida=" + sim.foodMap().amountAt(tile) + " golpes=" + strikes);
+    }
+
+    private static void strikeOnEmptyTileChangesNothing() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        if (sim.population() != 1) {
+            check("golpe em tile vazio não muda nada", false, "ninguém no mundo");
+            return;
+        }
+        Creature c = sim.creatures().activeAt(0);
+        int otherX = (c.tileX() + 3) % sim.world().width();
+        int otherY = (c.tileY() + 3) % sim.world().height();
+        Creature hit = sim.strikeAt(otherX, otherY);
+
+        check("golpe em tile vazio não muda nada e não estoura",
+                hit == null && sim.population() == 1 && c.health == 1f
+                        && c.lastDamageCause == null && sim.deathsByExternalDamage() == 0L,
+                "hit=" + hit + " vida=" + c.health + " causa=" + c.lastDamageCause);
+    }
+
+    private static void strikeOutsideTheWorldIsIgnored() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        if (sim.population() != 1) {
+            check("golpe fora do mundo é ignorado", false, "ninguém no mundo");
+            return;
+        }
+        Creature c = sim.creatures().activeAt(0);
+        World world = sim.world();
+
+        boolean allNull = sim.strikeAt(-1, 0) == null
+                && sim.strikeAt(0, -1) == null
+                && sim.strikeAt(world.width(), 0) == null
+                && sim.strikeAt(0, world.height()) == null;
+
+        check("golpe fora do mundo é ignorado sem exceção",
+                allNull && sim.population() == 1 && c.health == 1f,
+                "pop=" + sim.population() + " vida=" + c.health);
     }
 
     // ----------------------------------------------------------------- apoio

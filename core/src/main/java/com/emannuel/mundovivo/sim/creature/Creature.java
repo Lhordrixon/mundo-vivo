@@ -65,6 +65,12 @@ public final class Creature {
     /** Terreno que fere quem está em cima — hoje, oceano profundo. */
     public static final String CAUSE_HAZARDOUS_TERRAIN = "terreno perigoso";
 
+    /**
+     * O jogador tocou nesta criatura. Primeira causa de dano que vem de
+     * fora da simulação — as outras duas são o mundo agindo sozinho.
+     */
+    public static final String CAUSE_PLAYER_STRIKE = "golpe do jogador";
+
     Creature(int slot) {
         this.slot = slot;
     }

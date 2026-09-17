@@ -25,8 +25,12 @@ import com.emannuel.mundovivo.sim.world.World;
  */
 public final class WorldRenderer implements Disposable {
 
-    /** Tamanho de um tile em unidades de mundo (não em pixels de tela). */
-    public static final float TILE_SIZE = 8f;
+    /**
+     * Tamanho de um tile em unidades de mundo (não em pixels de tela).
+     * Mora em {@link TileMapping} porque a conversão de volta, de mundo
+     * para tile, precisa dele e precisa ser testável sem abrir tela.
+     */
+    public static final float TILE_SIZE = TileMapping.TILE_SIZE;
 
     private final World world;
     private final Pixmap pixmap;
@@ -105,7 +109,7 @@ public final class WorldRenderer implements Disposable {
      * {@link World#inBounds(int, int)} antes de usar.
      */
     public int tileX(float worldX) {
-        return (int) Math.floor(worldX / TILE_SIZE);
+        return TileMapping.tileX(worldX);
     }
 
     /**
@@ -113,7 +117,7 @@ public final class WorldRenderer implements Disposable {
      * a inversão vertical aplicada no desenho.
      */
     public int tileY(float worldY) {
-        return (int) Math.floor((worldPixelHeight() - worldY) / TILE_SIZE);
+        return TileMapping.tileY(worldY, world.height());
     }
 
     @Override
