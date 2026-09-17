@@ -94,10 +94,14 @@ class FactionRegistryTest {
             factions.join(ids[i]); // 2 membros cada
         }
 
-        boolean allCorrect = true;
+        boolean correctSoFar = true;
         for (int id : ids) {
-            allCorrect &= factions.memberCountOf(id) == 2;
+            correctSoFar &= factions.memberCountOf(id) == 2;
         }
+        // Variável nova, atribuída uma vez só: a lambda de assertAll exige
+        // que tudo que ela capture seja efetivamente final, e a de cima foi
+        // reatribuída dentro do laço.
+        final boolean allCorrect = correctSoFar;
         assertAll(
                 () -> assertEquals(200, factions.factionCount()),
                 () -> assertTrue(allCorrect, "alguma contagem se perdeu ao crescer o array")
