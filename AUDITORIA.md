@@ -792,7 +792,7 @@ sprites, não uma vantagem de design.
   mortes por dano externo, de 17/09), visíveis só em ferramenta
   de terminal.
 
-**Contagem conferida item a item.** O placar acima foi recontado sobre a lista numerada: 25 verdes, 6 amarelos, 185 vermelhos, 1 incerto.
+**Contagem conferida item a item.** O placar acima foi recontado sobre a lista numerada: 26 verdes, 6 amarelos, 184 vermelhos, 1 incerto.
 
 **Sistemas com backend e sem apresentação:** facções, território, contadores de
 estatística, edição de terreno, conversão de toque.
