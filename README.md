@@ -1,5 +1,9 @@
 # Mundo Vivo
 
+> **[Auditoria de paridade com o WorldBox →](AUDITORIA.md)**
+> 217 funcionalidades comparadas item a item, com evidência de código.
+> 26 implementadas, 184 ausentes, 13,4% de cobertura — atualizado até este commit.
+
 Jogo de sandbox de deus para Android: um mundo em grade que nasce de uma
 semente, com biomas, relevo e — nas etapas seguintes — criaturas e
 civilizações autônomas.
