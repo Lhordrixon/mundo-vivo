@@ -87,6 +87,17 @@ public final class SimSelfTest {
         waterIsNeverClaimed();
         territoryRoutesAroundWaterAndBreaksTiesByPoolOrder();
 
+        System.out.println("\n-- Dano externo --");
+        damageReducesHealthAndRecordsCause();
+        lethalBlowReportsItselfAndClampsAtZero();
+        damageOnAlreadyDeadIsNotLethalAgain();
+        nonPositiveDamageIsIgnored();
+        rebornCreatureForgetsPreviousCause();
+        hazardousTerrainDrainsHealthAndKills();
+        deathByHazardStillLeavesACorpse();
+        safeTerrainDoesNoDamage();
+        onlyDeepOceanIsHazardous();
+
         System.out.println("\n-- Simulation --");
         simulationIsDeterministic();
         creaturesStayOnWalkableGround();
@@ -101,6 +112,7 @@ public final class SimSelfTest {
         territoryOwnersAreValidFactionsOrUnclaimed();
         territoryNeverClaimsWater();
         territoryRecomputeIsFastEnough();
+        generatedWorldNeverInflictsTerrainDamage();
 
         System.out.printf("%n=== %d passaram, %d falharam ===%n", passed, failed);
         if (failed > 0) {
@@ -844,6 +856,169 @@ public final class SimSelfTest {
         check("recálculo de território cabe folgado no intervalo de um segundo",
                 msPerRecompute < 50.0, String.format("%.2f ms", msPerRecompute));
         System.out.printf("   (%.3f ms por recálculo com %d criaturas)%n", msPerRecompute, population);
+    }
+
+    // ----------------------------------------------------------- dano externo
+
+    private static Creature livingCreature() {
+        return new CreaturePool(4).spawn(0f, 0f, 0f, 0f);
+    }
+
+    private static void damageReducesHealthAndRecordsCause() {
+        Creature c = livingCreature();
+        boolean lethal = c.applyDamage(0.25f, Creature.CAUSE_HAZARDOUS_TERRAIN);
+        check("dano tira vida e registra a causa",
+                Math.abs(c.health - 0.75f) < 1e-6f && !lethal
+                        && Creature.CAUSE_HAZARDOUS_TERRAIN.equals(c.lastDamageCause),
+                "vida=" + c.health + " causa=" + c.lastDamageCause);
+    }
+
+    private static void lethalBlowReportsItselfAndClampsAtZero() {
+        Creature c = livingCreature();
+        boolean lethal = c.applyDamage(5f, Creature.CAUSE_HAZARDOUS_TERRAIN);
+        check("o golpe que zera a vida avisa que foi fatal, e a vida para em zero",
+                lethal && c.health == 0f, "fatal=" + lethal + " vida=" + c.health);
+    }
+
+    private static void damageOnAlreadyDeadIsNotLethalAgain() {
+        Creature c = livingCreature();
+        c.applyDamage(1f, Creature.CAUSE_STARVATION);
+        boolean lethalAgain = c.applyDamage(1f, "combate");
+        check("bater em quem já morreu não conta uma segunda morte",
+                !lethalAgain && c.health == 0f
+                        && Creature.CAUSE_STARVATION.equals(c.lastDamageCause),
+                "fatal=" + lethalAgain + " causa=" + c.lastDamageCause);
+    }
+
+    private static void nonPositiveDamageIsIgnored() {
+        Creature c = livingCreature();
+        c.applyDamage(0.2f, Creature.CAUSE_STARVATION);
+        c.applyDamage(0f, "nada");
+        c.applyDamage(-0.5f, "cura disfarçada de dano");
+        check("dano zero ou negativo é ignorado e não apaga a causa anterior",
+                Math.abs(c.health - 0.8f) < 1e-6f
+                        && Creature.CAUSE_STARVATION.equals(c.lastDamageCause),
+                "vida=" + c.health + " causa=" + c.lastDamageCause);
+    }
+
+    private static void rebornCreatureForgetsPreviousCause() {
+        CreaturePool pool = new CreaturePool(1);
+        Creature c = pool.spawn(0f, 0f, 0f, 0f);
+        c.applyDamage(1f, Creature.CAUSE_HAZARDOUS_TERRAIN);
+        pool.despawn(c);
+        Creature reborn = pool.spawn(0f, 0f, 0f, 0f);
+        check("renascer no mesmo slot limpa a causa do dano da vida anterior",
+                reborn.health == 1f && reborn.lastDamageCause == null,
+                "vida=" + reborn.health + " causa=" + reborn.lastDamageCause);
+    }
+
+    /** Campo aberto, sem água, com uma criatura só — terreno sob controle do teste. */
+    private static Simulation loneCreatureOnGrass(long seed) {
+        World world = new World(9, 9, seed);
+        for (int y = 0; y < world.height(); y++) {
+            for (int x = 0; x < world.width(); x++) {
+                world.setTile(x, y, TileType.GRASSLAND);
+            }
+        }
+        CreatureConfig config = new CreatureConfig();
+        config.initialPopulation = 1;
+        config.maxCreatures = 4;
+        return new Simulation(world, config);
+    }
+
+    private static void floodEverything(World world) {
+        for (int y = 0; y < world.height(); y++) {
+            for (int x = 0; x < world.width(); x++) {
+                world.setTile(x, y, TileType.DEEP_OCEAN);
+            }
+        }
+    }
+
+    private static void hazardousTerrainDrainsHealthAndKills() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        if (sim.population() != 1) {
+            check("criatura em terreno perigoso perde vida e morre", false,
+                    "povoamento inicial não colocou ninguém no mundo");
+            return;
+        }
+        Creature c = sim.creatures().activeAt(0);
+        floodEverything(sim.world());
+
+        run(sim, 0.5f);
+        boolean hurtButAlive = sim.population() == 1 && c.health < 0.9f
+                && Creature.CAUSE_HAZARDOUS_TERRAIN.equals(c.lastDamageCause);
+
+        run(sim, 5f);
+        boolean died = sim.population() == 0 && sim.deathsByExternalDamage() == 1L
+                && sim.deathsByStarvation() == 0L && sim.deathsByOldAge() == 0L;
+
+        check("criatura em terreno perigoso perde vida com o tempo e acaba morrendo",
+                hurtButAlive && died,
+                "ferida=" + hurtButAlive + " morta=" + died
+                        + " (externas=" + sim.deathsByExternalDamage()
+                        + " fome=" + sim.deathsByStarvation() + ")");
+    }
+
+    private static void deathByHazardStillLeavesACorpse() {
+        Simulation sim = loneCreatureOnGrass(77L);
+        if (sim.population() != 1) {
+            check("morte por terreno vira comida no tile", false, "ninguém para matar");
+            return;
+        }
+        Creature c = sim.creatures().activeAt(0);
+        int tile = sim.world().index(c.tileX(), c.tileY());
+
+        // Rebrota desligada e tile esvaziado: a única comida que pode
+        // aparecer ali depois disso é o cadáver. Só o terreno afunda — o
+        // mapa de comida continua achando que ali é campo, porque um tile
+        // de água tem capacidade zero e deposit() respeita a capacidade,
+        // então um corpo no fundo do mar não vira comida de ninguém.
+        sim.foodMap().regrowthPerSecond(0f);
+        sim.foodMap().consume(tile, 999f);
+        floodEverything(sim.world());
+
+        run(sim, 6f);
+        check("morte por terreno vira comida no tile, como qualquer outra morte",
+                sim.population() == 0
+                        && Math.abs(sim.foodMap().amountAt(tile) - sim.config().corpseFoodValue) < 1e-6f,
+                "pop=" + sim.population() + " comida=" + sim.foodMap().amountAt(tile));
+    }
+
+    private static void safeTerrainDoesNoDamage() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        if (sim.population() != 1) {
+            check("criatura em terreno normal não sofre dano", false, "ninguém no mundo");
+            return;
+        }
+        Creature c = sim.creatures().activeAt(0);
+        run(sim, 5f);
+        check("criatura em terreno normal não sofre dano de terreno",
+                sim.population() == 1 && c.health == 1f && c.lastDamageCause == null
+                        && sim.deathsByExternalDamage() == 0L,
+                "vida=" + c.health + " causa=" + c.lastDamageCause);
+    }
+
+    private static void onlyDeepOceanIsHazardous() {
+        StringBuilder hazards = new StringBuilder();
+        for (TileType type : TileType.VALUES) {
+            if (type.hazardous()) {
+                hazards.append(type).append(' ');
+            }
+        }
+        check("só o oceano profundo é terreno perigoso",
+                TileType.DEEP_OCEAN.hazardous() && hazards.toString().trim().equals("DEEP_OCEAN"),
+                "perigosos: " + hazards);
+    }
+
+    private static void generatedWorldNeverInflictsTerrainDamage() {
+        // O movimento recusa terreno não caminhável: em mundo gerado
+        // ninguém pisa no oceano profundo, então o dano de terreno não pode
+        // mudar em nada o equilíbrio que já existia.
+        Simulation sim = simulation(12345L);
+        run(sim, 10f * 60f);
+        check("mundo gerado normal não produz morte por dano externo",
+                sim.deathsByExternalDamage() == 0L,
+                sim.deathsByExternalDamage() + " mortes por dano de terreno");
     }
 
     // ----------------------------------------------------------------- apoio

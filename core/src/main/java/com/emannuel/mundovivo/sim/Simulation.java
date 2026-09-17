@@ -8,6 +8,7 @@ import com.emannuel.mundovivo.sim.ecology.FoodMap;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
 import com.emannuel.mundovivo.sim.util.Rng;
+import com.emannuel.mundovivo.sim.world.TileType;
 import com.emannuel.mundovivo.sim.world.World;
 
 /**
@@ -65,6 +66,7 @@ public final class Simulation {
     private long births;
     private long deathsByStarvation;
     private long deathsByOldAge;
+    private long deathsByExternalDamage;
 
     public Simulation(World world, CreatureConfig config) {
         config.validate();
@@ -130,6 +132,14 @@ public final class Simulation {
         return deathsByOldAge;
     }
 
+    /**
+     * Mortes por dano que não veio da fome — hoje só terreno perigoso;
+     * amanhã, combate e desastre, sem precisar de contador novo.
+     */
+    public long deathsByExternalDamage() {
+        return deathsByExternalDamage;
+    }
+
     // ------------------------------------------------------------------ passo
 
     /**
@@ -171,13 +181,29 @@ public final class Simulation {
 
         if (c.hunger >= 1f) {
             c.hunger = 1f;
-            c.health -= config.starvationDamagePerSecond * dt;
+            c.applyDamage(config.starvationDamagePerSecond * dt, Creature.CAUSE_STARVATION);
         } else if (c.hunger <= config.hungerFullThreshold && c.health < 1f) {
             c.health = Math.min(1f, c.health + config.healthRegenPerSecond * dt);
         }
 
+        // Dano do terreno. Depois da fome de propósito: quem está afundando
+        // e faminto ao mesmo tempo morre creditado ao terreno, que é o golpe
+        // mais forte e o mais recente. Em jogo normal isto nunca dispara —
+        // o movimento recusa terreno não caminhável, então ninguém entra
+        // andando no oceano profundo. Dispara quando o chão muda debaixo de
+        // alguém, que é para onde os poderes de deus e os desastres vão.
+        if (tileUnder(c).hazardous()) {
+            c.applyDamage(config.hazardDamagePerSecond * dt, Creature.CAUSE_HAZARDOUS_TERRAIN);
+        }
+
         if (c.health <= 0f) {
-            deathsByStarvation++;
+            // Um único ponto de morte por vida zerada, seja qual for a
+            // causa: a estatística é que se separa, não o caminho.
+            if (Creature.CAUSE_STARVATION.equals(c.lastDamageCause)) {
+                deathsByStarvation++;
+            } else {
+                deathsByExternalDamage++;
+            }
             die(c);
             return;
         }
@@ -401,6 +427,13 @@ public final class Simulation {
         int x = clamp(c.tileX(), 0, world.width() - 1);
         int y = clamp(c.tileY(), 0, world.height() - 1);
         return world.index(x, y);
+    }
+
+    /** Terreno sob a criatura. Passa por {@link #currentTile} para
+     *  herdar o mesmo corte de limites, em vez de repetir o clamp. */
+    private TileType tileUnder(Creature c) {
+        int tile = currentTile(c);
+        return world.tileAtUnsafe(tile % world.width(), tile / world.width());
     }
 
     // ------------------------------------------------------------------ buscas

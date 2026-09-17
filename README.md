@@ -202,6 +202,51 @@ limiar simplesmente não reproduz. É um regime mais estável que o da fome
 matando em massa, e é bom saber disso antes de mexer nos números: baixar a
 rebrota não vai matar mais criaturas, vai fazer nascerem menos.
 
+### Como a vida é tirada
+
+Até o sistema 4, a única linha do jogo que reduzia vida era a da fome, e
+ela mexia no campo direto. Isso não escala: combate, desastre, veneno e
+queda iam todos querer o mesmo, e cada um escreveria a sua própria
+subtração e o seu próprio jeito de matar. Agora existe uma porta só —
+`Creature.applyDamage(quanto, causa)` — e a fome passa por ela como
+qualquer outra coisa.
+
+O método tira vida, para em zero, registra a causa e devolve se **aquele**
+golpe foi o fatal. O que ele não faz é matar: morrer envolve virar comida
+no tile, sair da facção e devolver o slot ao pool, e nada disso mora no
+pacote `creature`, que não conhece mundo, comida nem facção. Quem trata a
+morte continua sendo `Simulation`, no mesmo ponto onde já tratava a morte
+por fome — existe **um** caminho de morte, e a causa só decide em qual
+contador a morte é lançada. Uma segunda pancada em quem já está com a vida
+zerada devolve `false`, que é o que impede combate e terreno de contarem a
+mesma morte duas vezes.
+
+A causa é `String` livre em vez de enum fechado porque combate vai querer
+dizer de quem levou a pancada, não só que levou; para as causas da própria
+simulação existem constantes, que é o que evita erro de digitação virar
+estatística errada.
+
+O primeiro usuário dessa porta é o terreno. `TileType` ganhou uma coluna
+`perigoso`, e só o **oceano profundo** está marcado: é a água mais funda
+que existe no jogo, não há lava nem terreno extremo, e água rasa e oceano
+comum não deveriam matar por contato. Montanha e pico nevado seguem
+intocados de propósito — são parede, não armadilha.
+
+Em jogo normal isso nunca dispara: o movimento recusa terreno não
+caminhável, então ninguém entra andando no oceano profundo, e há um teste
+que trava exatamente isso (dez minutos simulados, zero mortes por dano de
+terreno). O caso que ele existe para cobrir é o chão mudar **debaixo** de
+alguém — um poder de deus afundando a terra, um desastre alagando o vale —
+e é por isso que os testes de dano constroem o mundo à mão e afundam o
+terreno no meio da simulação, em vez de esperar que uma criatura faça
+besteira sozinha.
+
+Uma consequência que vale registrar: quem se afoga em tile que também
+virou água no mapa de comida não deixa cadáver aproveitável, porque
+`FoodMap.deposit` respeita a capacidade do tile e água tem capacidade
+zero. O corpo afunda. É regra antiga do `FoodMap`, não do dano, mas só
+agora ficou alcançável.
+
 ### Como funcionam facções e território
 
 Toda criatura pertence a uma facção. A população inicial funda uma facção
@@ -289,7 +334,7 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 
 - Todo o código, incluindo `render/` e os dois launchers, compila com
   `-Xlint:all` sem um único aviso.
-- As 55 verificações de `SimSelfTest` passam. Mundo: determinismo por
+- As 65 verificações de `SimSelfTest` passam. Mundo: determinismo por
   semente, sementes diferentes divergindo, todo tile com tipo válido,
   elevação sempre em [0,1], proporção terra/mar jogável em 6 sementes,
   presença de oceano profundo e de montanha, geração em 18 ms. Comida:
@@ -301,11 +346,17 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   Território: mundo novo sem dono nenhum, uma criatura reivindica tudo que
   alcança, corredor reto divide exatamente na metade, água nunca é
   reivindicada, busca contorna água e resolve empate pela ordem do pool.
+  Dano: vida cai e a causa fica registrada, golpe fatal se anuncia e a
+  vida para em zero, cadáver não morre duas vezes, dano não positivo
+  ignorado, causa não vaza entre duas vidas do mesmo slot, criatura em
+  terreno perigoso definha e morre, criatura em terreno normal não, só o
+  oceano profundo é perigoso.
   Simulação: mesma semente com a mesma história criatura por criatura
   (facção incluída), ninguém saindo do mundo nem pisando na água, fome e
   vida sempre em [0,1], passo gigante cortado, comida caindo com o
   pastoreio, nenhuma facção nova depois da fundação inicial, todo dono de
-  território é uma facção que existe, território nunca reivindica água.
+  território é uma facção que existe, território nunca reivindica água,
+  mundo gerado normal sem nenhuma morte por dano de terreno.
 - A saída visual do mundo foi conferida: mapas em várias sementes, com
   continentes, cordilheiras com neve no cume, litoral e calota polar.
 - Comportamento da população: 12 sementes rodadas por 30 minutos
@@ -386,6 +437,11 @@ Registrada de propósito, para não virar surpresa:
   quase nunca acontece — vizinhos tendem a ser parentes —, mas quando a
   guerra ou fronteiras fechadas entrarem, pode valer a pena decidir se um
   casal assim deveria sequer poder reproduzir.
+- **Dano de terreno não tem gatilho em jogo.** Nada hoje transforma o
+  chão debaixo de uma criatura, então a via existe testada mas ociosa: ela
+  é a base para o sistema 6 (poderes de deus) e o 7 (guerra), não uma
+  mecânica que o jogador já sinta. Enquanto não houver gatilho, o custo
+  dela é uma consulta de tile por criatura por passo.
 - **Temperatura e umidade são descartadas após a geração.** Só a elevação
   fica guardada. Quando o crescimento de vegetação ou a migração sazonal
   entrarem, elas terão que ser recalculadas ou armazenadas.

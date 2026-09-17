@@ -39,6 +39,17 @@ public final class CreatureConfig {
     /** Perda de vida por segundo com a fome no máximo. */
     public float starvationDamagePerSecond = 0.12f;
 
+    /**
+     * Perda de vida por segundo em cima de terreno perigoso.
+     *
+     * <p>Quatro vezes o dano da fome: morrer de inanição leva uns oito
+     * segundos de vida cheia, afogar-se leva dois. A diferença é
+     * proposital — fome é um processo, afundar é um acidente, e um
+     * acidente que desse tempo de sair andando não seria um acidente.
+     * Como todo número deste arquivo, é por segundo e não por quadro.
+     */
+    public float hazardDamagePerSecond = 0.5f;
+
     /** Ganho de vida por segundo quando bem alimentada. */
     public float healthRegenPerSecond = 0.04f;
 
@@ -115,6 +126,7 @@ public final class CreatureConfig {
         c.initialPopulation = initialPopulation;
         c.hungerPerSecond = hungerPerSecond;
         c.starvationDamagePerSecond = starvationDamagePerSecond;
+        c.hazardDamagePerSecond = hazardDamagePerSecond;
         c.healthRegenPerSecond = healthRegenPerSecond;
         c.eatingRate = eatingRate;
         c.hungerReliefPerFood = hungerReliefPerFood;
@@ -140,6 +152,8 @@ public final class CreatureConfig {
         require(initialPopulation >= 0 && initialPopulation <= maxCreatures,
                 "initialPopulation deve caber em maxCreatures");
         require(hungerPerSecond > 0f, "hungerPerSecond deve ser > 0");
+        require(hazardDamagePerSecond >= 0f,
+                "hazardDamagePerSecond não pode ser negativa, senão terreno perigoso cura");
         require(hungerFullThreshold < hungerSeekThreshold,
                 "hungerFullThreshold precisa ser menor que hungerSeekThreshold, "
                         + "senão a criatura nunca para de comer nem nunca começa");

@@ -4,6 +4,7 @@ import com.emannuel.mundovivo.sim.creature.Creature;
 import com.emannuel.mundovivo.sim.creature.CreatureConfig;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
+import com.emannuel.mundovivo.sim.world.TileType;
 import com.emannuel.mundovivo.sim.world.World;
 import com.emannuel.mundovivo.sim.world.WorldConfig;
 import com.emannuel.mundovivo.sim.world.WorldGenerator;
@@ -17,6 +18,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimulationTest {
@@ -192,6 +194,131 @@ class SimulationTest {
         assertTrue(msPerStep < 4.0,
                 "passo custou " + String.format("%.2f", msPerStep)
                         + " ms com " + population + " criaturas");
+    }
+
+    // -------------------------------------------------------- dano externo
+
+    /**
+     * Mundo de campo aberto, sem uma gota de água, com uma criatura só.
+     *
+     * <p>Feito à mão em vez de gerado porque o teste precisa mandar no
+     * terreno: a graça é afundar o chão debaixo da criatura no meio da
+     * simulação, que é o caso que o dano de terreno existe para cobrir.
+     */
+    private static Simulation loneCreatureOnGrass(long seed) {
+        World world = new World(9, 9, seed);
+        for (int y = 0; y < world.height(); y++) {
+            for (int x = 0; x < world.width(); x++) {
+                world.setTile(x, y, TileType.GRASSLAND);
+            }
+        }
+
+        CreatureConfig config = new CreatureConfig();
+        config.initialPopulation = 1;
+        config.maxCreatures = 4;
+
+        Simulation sim = new Simulation(world, config);
+        assertEquals(1, sim.population(), "o povoamento inicial não colocou ninguém no mundo");
+        return sim;
+    }
+
+    /** Afunda o mundo inteiro: a criatura fica sem para onde escapar. */
+    private static void floodEverything(World world) {
+        for (int y = 0; y < world.height(); y++) {
+            for (int x = 0; x < world.width(); x++) {
+                world.setTile(x, y, TileType.DEEP_OCEAN);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("criatura em terreno perigoso perde vida com o tempo e acaba morrendo")
+    void hazardousTerrainDrainsHealthAndKills() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        Creature c = sim.creatures().activeAt(0);
+        assertEquals(1f, c.health, 0f, "deveria nascer com vida cheia");
+
+        floodEverything(sim.world());
+
+        // Meio segundo: já feriu, ainda não matou.
+        run(sim, 0.5f);
+        assertAll(
+                () -> assertEquals(1, sim.population(), "morreu cedo demais"),
+                () -> assertTrue(c.health < 0.9f,
+                        "vida não caiu em terreno perigoso: " + c.health),
+                () -> assertEquals(Creature.CAUSE_HAZARDOUS_TERRAIN, c.lastDamageCause)
+        );
+
+        // Tempo de sobra para 0.5 de dano por segundo derrubar uma vida cheia.
+        run(sim, 5f);
+        assertAll(
+                () -> assertEquals(0, sim.population(), "sobreviveu ao afogamento"),
+                () -> assertEquals(1L, sim.deathsByExternalDamage()),
+                () -> assertEquals(0L, sim.deathsByStarvation(), "morte creditada à fome"),
+                () -> assertEquals(0L, sim.deathsByOldAge(), "morte creditada à velhice")
+        );
+    }
+
+    @Test
+    @DisplayName("morte por terreno vira comida no tile, como qualquer outra morte")
+    void deathByHazardStillLeavesACorpse() {
+        Simulation sim = loneCreatureOnGrass(77L);
+        Creature c = sim.creatures().activeAt(0);
+        int tile = sim.world().index(c.tileX(), c.tileY());
+
+        // Rebrota desligada e tile esvaziado: depois disso, a única comida
+        // que pode aparecer ali é o cadáver. É assim que se prova que a
+        // morte por terreno passa pelo mesmo die() da morte por fome, em
+        // vez de ter um caminho próprio.
+        sim.foodMap().regrowthPerSecond(0f);
+        sim.foodMap().consume(tile, 999f);
+        assertEquals(0f, sim.foodMap().amountAt(tile), 0f);
+
+        // Só o terreno afunda. O mapa de comida continua achando que ali é
+        // campo, de propósito: a capacidade de um tile de água é zero, e
+        // deposit() respeita a capacidade, então um cadáver no fundo do mar
+        // não vira comida de ninguém. Testar com a capacidade zerada mediria
+        // essa regra do FoodMap, não o caminho de morte.
+        floodEverything(sim.world());
+
+        run(sim, 6f);
+
+        assertAll(
+                () -> assertEquals(0, sim.population(), "sobreviveu ao afogamento"),
+                () -> assertEquals(sim.config().corpseFoodValue,
+                        sim.foodMap().amountAt(tile), 1e-6f,
+                        "a morte por terreno não depositou cadáver no tile")
+        );
+    }
+
+    @Test
+    @DisplayName("criatura em terreno normal não sofre dano de terreno")
+    void safeTerrainDoesNoDamage() {
+        Simulation sim = loneCreatureOnGrass(4242L);
+        Creature c = sim.creatures().activeAt(0);
+
+        run(sim, 5f);
+
+        assertAll(
+                () -> assertEquals(1, sim.population(), "morreu em campo aberto"),
+                () -> assertEquals(1f, c.health, 0f, "perdeu vida sem nada para feri-la"),
+                () -> assertNull(c.lastDamageCause, "levou dano do nada"),
+                () -> assertEquals(0L, sim.deathsByExternalDamage())
+        );
+    }
+
+    @Test
+    @DisplayName("mundo gerado normal não produz nenhuma morte por dano externo")
+    void generatedWorldNeverInflictsTerrainDamage() {
+        // O movimento recusa terreno não caminhável, então ninguém entra
+        // andando no oceano profundo. Se este teste ficar vermelho, alguma
+        // criatura passou a pisar onde não devia — a regressão que o dano
+        // de terreno tornaria fatal em vez de apenas estranha.
+        Simulation sim = simulation(12345L);
+        run(sim, 10f * 60f);
+
+        assertEquals(0L, sim.deathsByExternalDamage(),
+                "criatura sofreu dano de terreno em um mundo gerado normalmente");
     }
 
     // ------------------------------------------------------------ facções
