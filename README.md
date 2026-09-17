@@ -186,6 +186,14 @@ oscila em vez de despencar.
 população multiplica antes de a comida responder, estoura o mapa e morre de
 fome inteira. O ciclo de explosão e colapso sumiu ao dobrar a espera.
 
+Uma observação que vale registrar porque contraria a intuição: no equilíbrio
+atual as criaturas quase não morrem de fome. Em dez minutos simulados foram
+527 mortes de velhice contra 28 de inanição. A comida limita a população
+pela **natalidade**, não pela mortalidade — quem está com fome acima do
+limiar simplesmente não reproduz. É um regime mais estável que o da fome
+matando em massa, e é bom saber disso antes de mexer nos números: baixar a
+rebrota não vai matar mais criaturas, vai fazer nascerem menos.
+
 ---
 
 ## Ferramentas de apoio
