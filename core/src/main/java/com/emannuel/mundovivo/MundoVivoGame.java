@@ -8,7 +8,10 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.emannuel.mundovivo.render.CameraController;
+import com.emannuel.mundovivo.render.CreatureRenderer;
 import com.emannuel.mundovivo.render.WorldRenderer;
+import com.emannuel.mundovivo.sim.Simulation;
+import com.emannuel.mundovivo.sim.creature.CreatureConfig;
 import com.emannuel.mundovivo.sim.world.World;
 import com.emannuel.mundovivo.sim.world.WorldConfig;
 import com.emannuel.mundovivo.sim.world.WorldGenerator;
@@ -16,22 +19,22 @@ import com.emannuel.mundovivo.sim.world.WorldGenerator;
 /**
  * Ponto de entrada do jogo, comum a Android e desktop.
  *
- * <p>Estado atual: sistema 1 (grade e geração de mundo) e sistema 2
- * (câmera navegável). Não há unidades, facções nem poderes ainda — este é
- * o alicerce sobre o qual eles entram.
+ * <p>Estado atual: sistemas 1 a 3 — grade e geração de mundo, câmera
+ * navegável, e criaturas autônomas que procuram comida, comem, procuram
+ * parceiro, se reproduzem e morrem. Ainda não há facções, poderes de deus
+ * nem save.
  *
  * <p>Toque longo gera um mundo novo. É um atalho de desenvolvimento para
- * avaliar muitas seeds rápido; sai quando a interface de verdade entrar.
+ * avaliar muitas sementes rápido; sai quando a interface de verdade entrar.
  */
 public final class MundoVivoGame extends ApplicationAdapter {
 
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private CameraController controller;
-    private WorldRenderer renderer;
-
-    /** Semente do mundo atual — precisa ir junto no save. */
-    private long seed;
+    private WorldRenderer worldRenderer;
+    private CreatureRenderer creatureRenderer;
+    private Simulation simulation;
 
     /** O enquadramento inicial só acontece uma vez; girar a tela não deve resetar o zoom. */
     private boolean framed;
@@ -41,36 +44,40 @@ public final class MundoVivoGame extends ApplicationAdapter {
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
 
-        seed = System.nanoTime();
-        World world = WorldGenerator.generate(WorldConfig.medium(seed));
-        renderer = new WorldRenderer(world);
+        buildWorld(System.nanoTime());
 
-        controller = new CameraController(camera, renderer.worldPixelWidth(), renderer.worldPixelHeight());
+        controller = new CameraController(
+                camera, worldRenderer.worldPixelWidth(), worldRenderer.worldPixelHeight());
         controller.onLongPress(this::regenerate);
 
         Gdx.input.setInputProcessor(new InputMultiplexer(new GestureDetector(controller), controller));
+    }
+
+    private void buildWorld(long seed) {
+        World world = WorldGenerator.generate(WorldConfig.medium(seed));
+
+        worldRenderer = new WorldRenderer(world);
+        creatureRenderer = new CreatureRenderer(worldRenderer);
+        simulation = new Simulation(world, new CreatureConfig());
 
         Gdx.app.log("MundoVivo", "mundo " + world.width() + "x" + world.height()
                 + " seed=" + seed
-                + " terra=" + Math.round(world.landFraction() * 100f) + "%");
+                + " terra=" + Math.round(world.landFraction() * 100f) + "%"
+                + " populacao=" + simulation.population());
     }
 
     /** Descarta o mundo atual e gera outro com uma semente nova. */
     public void regenerate() {
-        seed = System.nanoTime();
-        World world = WorldGenerator.generate(WorldConfig.medium(seed));
+        // As texturas antigas precisam ser liberadas explicitamente: elas
+        // vivem na GPU e o coletor de lixo do Java não as alcança.
+        worldRenderer.dispose();
+        creatureRenderer.dispose();
 
-        // A textura antiga precisa ser liberada explicitamente: ela vive na
-        // GPU e o coletor de lixo do Java não a alcança.
-        renderer.dispose();
-        renderer = new WorldRenderer(world);
+        buildWorld(System.nanoTime());
 
         // A câmera é reaproveitada porque o tamanho do mundo não muda entre
         // gerações. Se um dia o jogador puder escolher o tamanho do mapa,
         // este é o ponto que precisa recriar o CameraController.
-
-        Gdx.app.log("MundoVivo", "novo mundo seed=" + seed
-                + " terra=" + Math.round(world.landFraction() * 100f) + "%");
     }
 
     @Override
@@ -87,19 +94,25 @@ public final class MundoVivoGame extends ApplicationAdapter {
 
     @Override
     public void render() {
+        simulation.step(Gdx.graphics.getDeltaTime());
+
         ScreenUtils.clear(0.04f, 0.06f, 0.09f, 1f);
 
         controller.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        renderer.render(batch);
+        worldRenderer.render(batch);
+        creatureRenderer.render(batch, simulation);
         batch.end();
     }
 
     @Override
     public void dispose() {
-        if (renderer != null) {
-            renderer.dispose();
+        if (worldRenderer != null) {
+            worldRenderer.dispose();
+        }
+        if (creatureRenderer != null) {
+            creatureRenderer.dispose();
         }
         if (batch != null) {
             batch.dispose();

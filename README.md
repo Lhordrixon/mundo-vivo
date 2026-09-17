@@ -16,16 +16,28 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 |---|---|
 | 1. Grade de tiles e geração de mundo | pronto e testado |
 | 2. Câmera com arraste, pinça e roda do mouse | pronto |
-| 3. Unidades com máquina de estados | não começou |
+| 3. Criaturas com máquina de estados | pronto e testado |
+| 3b. Comida por tile, com rebrota | pronto e testado |
+| 3c. Pool de criaturas sem alocação | pronto e testado |
 | 4. Facções e território | não começou |
 | 5. Save/load | não começou |
 | 6. Poderes de deus | não começou |
 | 7. IA de guerra | não começou |
 | 8. Passo de otimização e medição de FPS | não começou |
 
-O que roda hoje: o app abre, gera um mundo de 256x192 tiles e deixa você
-navegar por ele. Toque longo descarta o mundo e gera outro — atalho de
-desenvolvimento, sai quando a interface de verdade entrar.
+O que roda hoje: o app abre, gera um mundo de 256x192 tiles, espalha 120
+criaturas pela terra firme e as deixa viver. Elas procuram comida, comem,
+procuram parceiro, se reproduzem, envelhecem e morrem — de fome ou de
+velhice. A comida cresce de volta conforme a fertilidade do bioma, então a
+população cresce onde a terra é boa e míngua onde não é.
+
+A cor de cada criatura mostra o que ela está fazendo: branco vagando,
+amarelo procurando comida, verde comendo, rosa procurando parceiro. É o que
+torna a simulação legível de relance — dá para ver o amarelo se espalhar
+por uma região antes de a população cair ali.
+
+Toque longo descarta o mundo e gera outro — atalho de desenvolvimento, sai
+quando a interface de verdade entrar.
 
 ---
 
@@ -87,14 +99,17 @@ commit isolado para poder voltar atrás.
 
 ```
 core/
-  sim/      simulação pura — nenhuma linha de libGDX
-    noise/  ruído fractal determinístico
-    world/  tipos de tile, configuração, mundo, gerador
-    util/   RNG determinístico
-  render/   desenho e câmera — a única parte que conhece libGDX
-android/    launcher e empacotamento do APK
-desktop/    launcher para rodar no PC
-tools/      ferramentas de apoio em Java puro (prévia, verificação)
+  sim/         simulação pura — nenhuma linha de libGDX
+    Simulation.java  o laço de vida: comida, criaturas, tempo
+    noise/     ruído fractal determinístico
+    world/     tipos de tile, configuração, mundo, gerador
+    creature/  criatura, estados, pool, parâmetros
+    ecology/   comida por tile e rebrota
+    util/      RNG determinístico
+  render/      desenho e câmera — a única parte que conhece libGDX
+android/       launcher e empacotamento do APK
+desktop/       launcher para rodar no PC
+tools/         ferramentas de apoio em Java puro
 ```
 
 ### As quatro decisões que sustentam o resto
@@ -143,6 +158,34 @@ Separar clima de bioma (em vez de pintar bioma direto da altura) é o que
 faz aparecer deserto ao lado de selva na mesma latitude, em vez de faixas
 horizontais uniformes.
 
+### Como as criaturas se comportam
+
+Cada criatura tem fome, vida, idade e um estado. A cada passo a fome sobe;
+acima de um limiar ela larga o que estiver fazendo e procura comida; com a
+fome no máximo começa a perder vida. Saciada, adulta e fora do período de
+espera, procura parceiro. A reprodução custa fome aos dois pais — é esse
+custo que amarra a população à comida disponível em vez de deixá-la crescer
+até bater no teto.
+
+Três números foram descobertos medindo, não escolhendo:
+
+**O raio de busca por parceiro é cinco vezes o da comida.** Com os dois
+iguais, uma população que afina deixa de se encontrar e entra em espiral de
+extinção mesmo com comida sobrando — um terço das sementes testadas morria
+assim. Ampliar o raio de parceiro é de graça, porque essa busca já percorre
+a lista de criaturas vivas e o raio só filtra o resultado; ampliar o de
+comida custaria varredura de tiles.
+
+**O limiar de "tile comestível" precisa ser baixo.** Com ele alto, a
+escassez vira um precipício: um tile com comida logo abaixo do limiar é
+invisível, então a comida acaba para todo mundo ao mesmo tempo e a
+população colapsa junto. Baixo, a escassez chega devagar e a população
+oscila em vez de despencar.
+
+**A espera entre reproduções domina a estabilidade.** Com espera curta a
+população multiplica antes de a comida responder, estoura o mapa e morre de
+fome inteira. O ciclo de explosão e colapso sumiu ao dobrar a espera.
+
 ---
 
 ## Ferramentas de apoio
@@ -152,17 +195,23 @@ Duas ferramentas em Java puro, sem Gradle e sem baixar dependência:
 ```bash
 # compile a simulação uma vez
 javac -d build/sim $(find core/src/main/java/com/emannuel/mundovivo/sim -name '*.java')
-javac -d build/tools -cp build/sim tools/WorldPreview.java tools/SimSelfTest.java
+javac -d build/tools -cp build/sim tools/*.java
 
 # gere um PNG do mundo da semente 12345, com 3 px por tile
 java -cp build/sim:build/tools WorldPreview 12345 3 previa.png
 
-# rode a verificação da simulação
+# acompanhe a população por 5 minutos simulados
+java -cp build/sim:build/tools SimulationReport 12345 5
+
+# rode a verificação inteira
 java -cp build/sim:build/tools SimSelfTest
 ```
 
 `WorldPreview` encurta o ciclo de calibragem de minutos para segundos:
-mexeu em `WorldConfig`, roda e olha o PNG. `SimSelfTest` cobre as mesmas
+mexeu em `WorldConfig`, roda e olha o PNG. `SimulationReport` faz o mesmo
+para `CreatureConfig`: mostra a população, os nascimentos, as mortes por
+fome e por velhice e o custo por passo ao longo do tempo — foi com ele que
+o ciclo de explosão e colapso apareceu. `SimSelfTest` cobre as mesmas
 invariantes da suíte JUnit, mas roda em qualquer máquina com JDK.
 
 ---
@@ -173,16 +222,29 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 
 **Verificado de fato:**
 
-- A simulação (`sim/`) compila com `-Xlint:all` sem um único aviso.
-- As 21 verificações de `SimSelfTest` passam: determinismo por semente,
-  seeds diferentes divergindo, todo tile com tipo válido, elevação sempre
-  em [0,1], proporção terra/mar jogável em 6 sementes, presença de oceano
-  profundo e de montanha, recusa de configuração inválida, acesso fora dos
-  limites lançando exceção, e geração do mundo padrão em 18 ms.
-- A saída visual foi conferida: mapas gerados em várias sementes, com
-  continentes, cordilheiras com neve no cume, litoral e calota polar.
 - Todo o código, incluindo `render/` e os dois launchers, compila com
-  `-Xlint:all` sem avisos.
+  `-Xlint:all` sem um único aviso.
+- As 40 verificações de `SimSelfTest` passam. Mundo: determinismo por
+  semente, sementes diferentes divergindo, todo tile com tipo válido,
+  elevação sempre em [0,1], proporção terra/mar jogável em 6 sementes,
+  presença de oceano profundo e de montanha, geração em 18 ms. Comida:
+  mundo novo na capacidade, rebrota respeitando o teto, consumo limitado ao
+  que existe, água sem comida. Pool: contagens coerentes, mil nascimentos
+  em dez slots, remoção do meio sem perder ninguém, morte dupla ignorada.
+  Simulação: mesma semente com a mesma história criatura por criatura,
+  ninguém saindo do mundo nem pisando na água, fome e vida sempre em [0,1],
+  passo gigante cortado, comida caindo com o pastoreio.
+- A saída visual do mundo foi conferida: mapas em várias sementes, com
+  continentes, cordilheiras com neve no cume, litoral e calota polar.
+- Comportamento da população: 12 sementes rodadas por 30 minutos
+  simulados, **nenhuma extinção e nenhuma batida no teto do pool**,
+  populações finais entre 334 e 1082.
+- Estabilidade por taxa de quadros: 10 sementes a 20 minutos, população
+  média de 494, 432 e 463 a 30, 60 e 90 quadros por segundo — dentro da
+  variação entre sementes. A 20 quadros há desvio para cima (706), porque
+  com passos grossos cada visita a um tile rende uma mordida maior.
+- Custo de um passo: 0,04 ms com ~200 criaturas e 0,086 ms com 2100, em um
+  quadro que tem 16,6 ms. A simulação não é o gargalo.
 
 **Não verificado:**
 
@@ -193,12 +255,14 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   mão, não contra o libGDX real. Isso pega erro de sintaxe, import faltando
   e método de interface não implementado — mas **não** garante que as
   assinaturas batem com as do libGDX 1.14.2.
-- O jogo nunca foi executado. Não há medição de FPS, nem confirmação de que
-  o `flipY` da textura deixa o mapa na orientação certa na tela.
+- O jogo nunca foi executado. Não há medição de FPS real, nem confirmação
+  de que o `flipY` da textura deixa o mapa na orientação certa na tela — e
+  a mesma dúvida vale para a posição das criaturas, que usam a mesma
+  inversão de eixo.
 - A suíte JUnit nunca rodou (JUnit não pôde ser baixado). O que rodou foi o
   `SimSelfTest`, que cobre as mesmas invariantes em Java puro.
 
-Tradução prática: a lógica de mundo está testada e funcionando; a camada
+Tradução prática: a simulação inteira está testada e funcionando; a camada
 gráfica está escrita com cuidado mas não foi provada. O primeiro
 `./gradlew desktop:run` é o teste que falta, e é onde eventual divergência
 de assinatura vai aparecer.
@@ -214,12 +278,27 @@ Registrada de propósito, para não virar surpresa:
   enquanto as alterações são esporádicas; vira gargalo quando os poderes de
   deus pintarem terreno continuamente. A correção é acumular a região suja
   e subir só ela.
-- **Sem pooling de objetos ainda.** Não faz falta hoje porque não existem
-  unidades. Precisa existir antes do sistema 3, não depois.
+- **A busca por parceiro percorre todas as criaturas vivas.** Hoje é barato
+  porque só quem está procurando parceiro varre, e a maioria não está. Com
+  alguns milhares de criaturas vira quadrático. A correção é indexar as
+  criaturas em uma grade espacial; o lugar é `Simulation.resolveMate`.
+- **A rebrota percorre o mapa inteiro a cada passo.** 49 mil tiles por
+  passo, custo baixo mas desnecessário. A correção é crescer uma fatia do
+  mapa por quadro com o `dt` multiplicado.
+- **O teto do pool não é um limitador de população saudável.** Atingi-lo
+  bloqueia nascimentos mas não mortes, e a população entra em declínio em
+  vez de estabilizar. Medido: com o teto em 250, a população de uma semente
+  que normalmente vive foi a zero. O teto existe como limite de memória; a
+  comida é que deve limitar. Se um dia o teto passar a ser alcançado em
+  jogo, ele precisa virar um limite suave.
+- **Criaturas andam em linha reta.** Não há busca de caminho: quando o
+  passo seguinte cairia na água, ele é recusado e a criatura escolhe outro
+  destino. Funciona, mas uma criatura pode levar tempo para contornar uma
+  baía. Entra junto com o sistema de território.
 - **Temperatura e umidade são descartadas após a geração.** Só a elevação
   fica guardada. Quando o crescimento de vegetação ou a migração sazonal
   entrarem, elas terão que ser recalculadas ou armazenadas.
-- **Sem save/load.** O `World` já expõe `rawTiles()` e `rawElevation()`
+- **Sem save/load.** `World`, `FoodMap` e `Rng` já expõem o estado bruto
   pensando nisso, e a semente já é guardada, mas não há serialização.
 - **Toque longo regenera o mundo.** Comportamento de desenvolvimento, vai
   colidir com gestos de jogo mais adiante.
@@ -232,8 +311,16 @@ Registrada de propósito, para não virar surpresa:
 
 ## Próximo passo
 
-Sistema 3: uma unidade com máquina de estados (procurar comida, comer,
-procurar parceiro, reproduzir, morrer), em `sim/`, com testes, antes de
-existir qualquer desenho dela na tela. A ordem importa: a máquina de
-estados é testável sem tela, e tudo que for testável sem tela deve ser
-escrito sem tela.
+**Antes de qualquer código novo: rodar `./gradlew desktop:run`.** É a única
+parte do projeto que nunca foi provada, e continuar empilhando sistemas
+sobre uma camada gráfica não verificada só aumenta o tamanho do estrago se
+algo lá estiver errado.
+
+Depois disso, sistema 4: facções. Cada criatura passa a pertencer a um
+grupo, herdado dos pais; cada grupo ocupa um território, que é o conjunto
+de tiles mais próximos dos seus membros. Vai em `sim/`, com testes, antes
+de existir qualquer bandeira desenhada na tela — pela mesma razão de
+sempre: o que é testável sem tela deve ser escrito sem tela.
+
+O território é também o que destrava o sistema 7 (guerra), porque disputa
+precisa de uma fronteira para acontecer.
