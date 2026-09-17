@@ -24,6 +24,7 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 6. Poderes de deus | não começou |
 | 7. IA de guerra | não começou |
 | 8. Passo de otimização e medição de FPS | não começou |
+| 9. Dano externo e terreno perigoso | pronto e testado |
 
 O que roda hoje: o app abre, gera um mundo de 256x192 tiles, espalha 120
 criaturas pela terra firme e as deixa viver. Elas procuram comida, comem,
