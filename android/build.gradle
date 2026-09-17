@@ -1,0 +1,87 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.emannuel.mundovivo'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.emannuel.mundovivo'
+        // minSdk 26 evita ter que manter ícones PNG em cinco resoluções:
+        // a partir do Android 8 o ícone adaptativo é XML puro.
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/robovm/ios/robovm.xml']
+        }
+    }
+}
+
+// As bibliotecas nativas do libGDX (.so) vêm dentro de jars, um por
+// arquitetura. Esta configuração separada existe só para que o Gradle as
+// baixe sem colocá-las no classpath de compilação.
+configurations {
+    natives
+}
+
+dependencies {
+    implementation project(':core')
+    implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
+}
+
+// Extrai os .so de dentro dos jars para src/main/jniLibs/<arquitetura>/,
+// que é onde o AGP espera encontrá-los ao montar o APK.
+tasks.register('copyAndroidNatives') {
+    def jniLibs = file('src/main/jniLibs')
+    outputs.dir(jniLibs)
+
+    doFirst {
+        ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'].each { abi ->
+            file("$jniLibs/$abi").mkdirs()
+        }
+
+        configurations.natives.copy().files.each { jar ->
+            def abi = null
+            if (jar.name.endsWith('natives-armeabi-v7a.jar')) abi = 'armeabi-v7a'
+            if (jar.name.endsWith('natives-arm64-v8a.jar'))   abi = 'arm64-v8a'
+            if (jar.name.endsWith('natives-x86.jar'))         abi = 'x86'
+            if (jar.name.endsWith('natives-x86_64.jar'))      abi = 'x86_64'
+
+            if (abi != null) {
+                copy {
+                    from zipTree(jar)
+                    into file("$jniLibs/$abi")
+                    include '*.so'
+                }
+            }
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('JniLibFolders') }
+        .configureEach { it.dependsOn 'copyAndroidNatives' }

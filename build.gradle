@@ -1,0 +1,31 @@
+// Build raiz. Os módulos:
+//   core    — jogo e simulação, sem nada específico de plataforma
+//   android — launcher e empacotamento do APK
+//   desktop — launcher para rodar no PC durante o desenvolvimento
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:$agpVersion"
+    }
+}
+
+allprojects {
+    group = 'com.emannuel.mundovivo'
+    version = '0.1.0'
+
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+subprojects {
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+}

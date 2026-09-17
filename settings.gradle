@@ -1,0 +1,5 @@
+rootProject.name = 'mundo-vivo'
+
+include 'core'
+include 'android'
+include 'desktop'

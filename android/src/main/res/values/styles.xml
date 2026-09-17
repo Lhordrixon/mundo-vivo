@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema de sistema, sem AppCompat: o jogo desenha tudo por conta
+         própria e não precisa de nenhum widget do Android. -->
+    <style name="GdxTheme" parent="android:Theme.Material.NoActionBar.Fullscreen" />
+</resources>
