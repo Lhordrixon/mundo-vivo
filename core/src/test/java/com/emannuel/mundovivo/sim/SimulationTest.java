@@ -2,6 +2,8 @@ package com.emannuel.mundovivo.sim;
 
 import com.emannuel.mundovivo.sim.creature.Creature;
 import com.emannuel.mundovivo.sim.creature.CreatureConfig;
+import com.emannuel.mundovivo.sim.faction.FactionRegistry;
+import com.emannuel.mundovivo.sim.faction.Territory;
 import com.emannuel.mundovivo.sim.world.World;
 import com.emannuel.mundovivo.sim.world.WorldConfig;
 import com.emannuel.mundovivo.sim.world.WorldGenerator;
@@ -9,6 +11,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,7 +57,8 @@ class SimulationTest {
                     () -> assertEquals(ca.x, cb.x, 0f),
                     () -> assertEquals(ca.y, cb.y, 0f),
                     () -> assertEquals(ca.hunger, cb.hunger, 0f),
-                    () -> assertEquals(ca.state, cb.state)
+                    () -> assertEquals(ca.state, cb.state),
+                    () -> assertEquals(ca.factionId, cb.factionId, "facção divergiu")
             );
         }
     }
@@ -186,5 +192,78 @@ class SimulationTest {
         assertTrue(msPerStep < 4.0,
                 "passo custou " + String.format("%.2f", msPerStep)
                         + " ms com " + population + " criaturas");
+    }
+
+    // ------------------------------------------------------------ facções
+
+    @Test
+    @DisplayName("cada criatura fundadora nasce em uma facção só sua")
+    void foundersEachGetTheirOwnFaction() {
+        Simulation sim = simulation(2222L);
+
+        Set<Integer> seen = new HashSet<>();
+        for (int i = 0; i < sim.population(); i++) {
+            seen.add(sim.creatures().activeAt(i).factionId);
+        }
+
+        assertAll(
+                () -> assertEquals(sim.population(), seen.size(),
+                        "duas criaturas fundadoras compartilhando facção"),
+                () -> assertEquals(sim.population(), sim.factions().factionCount())
+        );
+    }
+
+    @Test
+    @DisplayName("nenhuma facção nova aparece depois da fundação inicial do mundo")
+    void noNewFactionsAfterInitialFounding() {
+        Simulation sim = simulation(555L);
+        int founders = sim.factions().factionCount();
+
+        run(sim, 20f * 60f);
+
+        assertEquals(founders, sim.factions().factionCount(),
+                "uma facção surgiu do nada depois do povoamento inicial");
+
+        for (int i = 0; i < sim.population(); i++) {
+            Creature c = sim.creatures().activeAt(i);
+            assertTrue(c.factionId >= 0 && c.factionId < founders,
+                    "criatura com facção fora do intervalo das fundadoras: " + c.factionId);
+        }
+    }
+
+    @Test
+    @DisplayName("todo dono de território é uma facção existente, ou ninguém")
+    void territoryOwnersAreValidFactionsOrUnclaimed() {
+        Simulation sim = simulation(2024L);
+        run(sim, 5f * 60f);
+
+        Territory territory = sim.territory();
+        FactionRegistry factions = sim.factions();
+        int tileCount = sim.world().tileCount();
+
+        for (int i = 0; i < tileCount; i++) {
+            int owner = territory.ownerAt(i);
+            assertTrue(owner == Territory.UNCLAIMED || (owner >= 0 && owner < factions.factionCount()),
+                    "dono inválido no tile " + i + ": " + owner);
+        }
+    }
+
+    @Test
+    @DisplayName("território nunca reivindica água")
+    void territoryNeverClaimsWater() {
+        Simulation sim = simulation(909L);
+        run(sim, 5f * 60f);
+
+        World world = sim.world();
+        Territory territory = sim.territory();
+
+        for (int y = 0; y < world.height(); y++) {
+            for (int x = 0; x < world.width(); x++) {
+                if (world.tileAtUnsafe(x, y).isWater()) {
+                    assertEquals(Territory.UNCLAIMED, territory.ownerAt(x, y),
+                            "água reivindicada em (" + x + "," + y + ")");
+                }
+            }
+        }
     }
 }

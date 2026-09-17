@@ -3,6 +3,8 @@ import com.emannuel.mundovivo.sim.creature.Creature;
 import com.emannuel.mundovivo.sim.creature.CreatureConfig;
 import com.emannuel.mundovivo.sim.creature.CreaturePool;
 import com.emannuel.mundovivo.sim.ecology.FoodMap;
+import com.emannuel.mundovivo.sim.faction.FactionRegistry;
+import com.emannuel.mundovivo.sim.faction.Territory;
 import com.emannuel.mundovivo.sim.noise.FractalNoise;
 import com.emannuel.mundovivo.sim.world.TileType;
 import com.emannuel.mundovivo.sim.world.World;
@@ -10,6 +12,8 @@ import com.emannuel.mundovivo.sim.world.WorldConfig;
 import com.emannuel.mundovivo.sim.world.WorldGenerator;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Verificação da simulação sem Gradle e sem JUnit.
@@ -69,6 +73,20 @@ public final class SimSelfTest {
         poolRemovalFromMiddleLosesNobody();
         poolDoubleDespawnIsIgnored();
 
+        System.out.println("\n-- FactionRegistry --");
+        factionIdsAreSequential();
+        newFactionStartsWithOneMember();
+        joinAndLeaveAdjustMemberCount();
+        leaveDownToZeroMarksExtinctionWithoutGoingNegative();
+        unknownFactionIdThrows();
+
+        System.out.println("\n-- Territory --");
+        emptyTerritoryStartsUnclaimed();
+        singleCreatureClaimsAllReachableLand();
+        corridorSplitsAtTheMidpoint();
+        waterIsNeverClaimed();
+        territoryRoutesAroundWaterAndBreaksTiesByPoolOrder();
+
         System.out.println("\n-- Simulation --");
         simulationIsDeterministic();
         creaturesStayOnWalkableGround();
@@ -78,6 +96,11 @@ public final class SimSelfTest {
         hugeTimeStepIsClamped();
         foodRespondsToGrazing();
         simulationStepIsFastEnough();
+        foundersEachGetTheirOwnFaction();
+        noNewFactionsAfterInitialFounding();
+        territoryOwnersAreValidFactionsOrUnclaimed();
+        territoryNeverClaimsWater();
+        territoryRecomputeIsFastEnough();
 
         System.out.printf("%n=== %d passaram, %d falharam ===%n", passed, failed);
         if (failed > 0) {
@@ -427,6 +450,154 @@ public final class SimSelfTest {
                 pool.activeCount() + "/" + pool.freeCount());
     }
 
+    // -------------------------------------------------------- FactionRegistry
+
+    private static void factionIdsAreSequential() {
+        FactionRegistry factions = new FactionRegistry();
+        boolean ok = factions.create() == 0 && factions.create() == 1 && factions.create() == 2;
+        check("ids de facção são sequenciais a partir de zero",
+                ok && factions.factionCount() == 3, "factionCount=" + factions.factionCount());
+    }
+
+    private static void newFactionStartsWithOneMember() {
+        FactionRegistry factions = new FactionRegistry();
+        int id = factions.create();
+        check("facção nova nasce com um membro, o fundador",
+                factions.memberCountOf(id) == 1 && !factions.isExtinct(id),
+                "membros=" + factions.memberCountOf(id));
+    }
+
+    private static void joinAndLeaveAdjustMemberCount() {
+        FactionRegistry factions = new FactionRegistry();
+        int id = factions.create();
+        factions.join(id);
+        factions.join(id);
+        boolean afterJoins = factions.memberCountOf(id) == 3;
+        factions.leave(id);
+        boolean afterLeave = factions.memberCountOf(id) == 2;
+        check("join e leave ajustam a contagem de membros", afterJoins && afterLeave,
+                "membros=" + factions.memberCountOf(id));
+    }
+
+    private static void leaveDownToZeroMarksExtinctionWithoutGoingNegative() {
+        FactionRegistry factions = new FactionRegistry();
+        int id = factions.create();
+        factions.leave(id);
+        boolean extinctAtZero = factions.memberCountOf(id) == 0 && factions.isExtinct(id);
+        factions.leave(id); // morte "sobrando": não deve derrubar abaixo de zero
+        check("leave até zero marca extinção sem ir negativo",
+                extinctAtZero && factions.memberCountOf(id) == 0,
+                "membros=" + factions.memberCountOf(id));
+    }
+
+    private static void unknownFactionIdThrows() {
+        FactionRegistry factions = new FactionRegistry();
+        factions.create();
+        boolean all = throwsOob(() -> factions.memberCountOf(-1))
+                && throwsOob(() -> factions.memberCountOf(1))
+                && throwsOob(() -> factions.join(99))
+                && throwsOob(() -> factions.leave(99));
+        check("id de facção inexistente lança exceção em vez de devolver lixo", all,
+                "alguma chamada passou batido");
+    }
+
+    // -------------------------------------------------------------- Territory
+
+    private static World flatLand(int width, int height) {
+        World world = new World(width, height, 1L);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                world.setTile(x, y, TileType.GRASSLAND);
+            }
+        }
+        return world;
+    }
+
+    private static void emptyTerritoryStartsUnclaimed() {
+        World world = flatLand(4, 4);
+        Territory territory = new Territory(world);
+        boolean allUnclaimed = true;
+        for (int i = 0; i < world.tileCount() && allUnclaimed; i++) {
+            allUnclaimed = territory.ownerAt(i) == Territory.UNCLAIMED;
+        }
+        check("antes do primeiro recálculo, todo tile está sem dono", allUnclaimed, "sobrou dono");
+    }
+
+    private static void singleCreatureClaimsAllReachableLand() {
+        World world = flatLand(5, 3);
+        Territory territory = new Territory(world);
+        CreaturePool pool = new CreaturePool(4);
+        Creature c = pool.spawn(2.5f, 1.5f, 0f, 0f);
+        c.factionId = 7;
+        territory.recompute(pool);
+
+        boolean allClaimed = true;
+        for (int i = 0; i < world.tileCount() && allClaimed; i++) {
+            allClaimed = territory.ownerAt(i) == 7;
+        }
+        check("uma única criatura reivindica toda a terra que alcança",
+                allClaimed && territory.tileCountOf(7) == world.tileCount(),
+                "tileCountOf(7)=" + territory.tileCountOf(7) + "/" + world.tileCount());
+    }
+
+    private static void corridorSplitsAtTheMidpoint() {
+        World world = flatLand(10, 1);
+        Territory territory = new Territory(world);
+        CreaturePool pool = new CreaturePool(4);
+        Creature a = pool.spawn(0.5f, 0.5f, 0f, 0f);
+        a.factionId = 0;
+        Creature b = pool.spawn(9.5f, 0.5f, 0f, 0f);
+        b.factionId = 1;
+        territory.recompute(pool);
+
+        boolean ok = true;
+        for (int x = 0; x <= 4 && ok; x++) ok = territory.ownerAt(x, 0) == 0;
+        for (int x = 5; x <= 9 && ok; x++) ok = territory.ownerAt(x, 0) == 1;
+        check("corredor reto se divide exatamente na metade entre duas facções",
+                ok && territory.tileCountOf(0) == 5 && territory.tileCountOf(1) == 5,
+                "5=" + territory.tileCountOf(0) + " 5=" + territory.tileCountOf(1));
+    }
+
+    private static void waterIsNeverClaimed() {
+        World world = flatLand(5, 1);
+        world.setTile(2, 0, TileType.OCEAN);
+        Territory territory = new Territory(world);
+        CreaturePool pool = new CreaturePool(4);
+        Creature a = pool.spawn(0.5f, 0.5f, 0f, 0f);
+        a.factionId = 0;
+        Creature b = pool.spawn(4.5f, 0.5f, 0f, 0f);
+        b.factionId = 1;
+        territory.recompute(pool);
+
+        boolean ok = territory.ownerAt(2, 0) == Territory.UNCLAIMED
+                && territory.ownerAt(0, 0) == 0 && territory.ownerAt(1, 0) == 0
+                && territory.ownerAt(3, 0) == 1 && territory.ownerAt(4, 0) == 1;
+        check("água nunca é reivindicada, mesmo cercada de território dos dois lados", ok, "divergiu");
+    }
+
+    private static void territoryRoutesAroundWaterAndBreaksTiesByPoolOrder() {
+        World world = flatLand(3, 3);
+        world.setTile(1, 1, TileType.OCEAN);
+        Territory territory = new Territory(world);
+        CreaturePool pool = new CreaturePool(4);
+        Creature a = pool.spawn(0.5f, 1.5f, 0f, 0f);
+        a.factionId = 0;
+        Creature b = pool.spawn(2.5f, 1.5f, 0f, 0f);
+        b.factionId = 1;
+        territory.recompute(pool);
+
+        // (1,0) e (1,2) estão a distância 2 dos dois lados, contornando a
+        // água; o empate vai para A, semeado primeiro na lista de ativos.
+        boolean ok = territory.ownerAt(0, 0) == 0 && territory.ownerAt(0, 1) == 0
+                && territory.ownerAt(0, 2) == 0 && territory.ownerAt(1, 0) == 0
+                && territory.ownerAt(1, 2) == 0 && territory.ownerAt(1, 1) == Territory.UNCLAIMED
+                && territory.ownerAt(2, 0) == 1 && territory.ownerAt(2, 1) == 1
+                && territory.ownerAt(2, 2) == 1;
+        check("território contorna água e empates vão para quem entrou primeiro no pool",
+                ok && territory.tileCountOf(0) == 5 && territory.tileCountOf(1) == 3,
+                "5=" + territory.tileCountOf(0) + " 3=" + territory.tileCountOf(1));
+    }
+
     // ------------------------------------------------------------ simulação
 
     private static final float STEP = 1f / 60f;
@@ -456,7 +627,8 @@ public final class SimSelfTest {
             Creature ca = a.creatures().activeAt(i);
             Creature cb = b.creatures().activeAt(i);
             same = ca.id == cb.id && ca.x == cb.x && ca.y == cb.y
-                    && ca.hunger == cb.hunger && ca.state == cb.state;
+                    && ca.hunger == cb.hunger && ca.state == cb.state
+                    && ca.factionId == cb.factionId;
         }
         check("mesma semente produz a mesma história", same,
                 a.population() + " vs " + b.population() + " criaturas");
@@ -588,6 +760,90 @@ public final class SimSelfTest {
         check("um passo cabe folgado no quadro de 16,6 ms", msPerStep < 4.0,
                 String.format("%.2f ms", msPerStep));
         System.out.printf("   (%.3f ms por passo com %d criaturas)%n", msPerStep, population);
+    }
+
+    private static void foundersEachGetTheirOwnFaction() {
+        Simulation sim = simulation(2222L);
+        Set<Integer> seen = new HashSet<>();
+        for (int i = 0; i < sim.population(); i++) {
+            seen.add(sim.creatures().activeAt(i).factionId);
+        }
+        check("cada criatura fundadora nasce em uma facção só sua",
+                seen.size() == sim.population() && sim.factions().factionCount() == sim.population(),
+                seen.size() + " facções para " + sim.population() + " fundadoras");
+    }
+
+    private static void noNewFactionsAfterInitialFounding() {
+        Simulation sim = simulation(555L);
+        int founders = sim.factions().factionCount();
+        run(sim, 20f * 60f);
+
+        boolean noGrowth = founders == sim.factions().factionCount();
+        boolean allInRange = true;
+        for (int i = 0; i < sim.population() && allInRange; i++) {
+            int f = sim.creatures().activeAt(i).factionId;
+            allInRange = f >= 0 && f < founders;
+        }
+        check("nenhuma facção nova aparece depois da fundação inicial",
+                noGrowth && allInRange,
+                founders + " -> " + sim.factions().factionCount() + " facções");
+    }
+
+    private static void territoryOwnersAreValidFactionsOrUnclaimed() {
+        Simulation sim = simulation(2024L);
+        run(sim, 5f * 60f);
+
+        Territory territory = sim.territory();
+        FactionRegistry factions = sim.factions();
+        int tileCount = sim.world().tileCount();
+        String problem = null;
+
+        for (int i = 0; i < tileCount && problem == null; i++) {
+            int owner = territory.ownerAt(i);
+            if (owner != Territory.UNCLAIMED && (owner < 0 || owner >= factions.factionCount())) {
+                problem = "tile " + i + " com dono inválido: " + owner;
+            }
+        }
+        check("todo dono de território é uma facção existente, ou ninguém", problem == null, problem);
+    }
+
+    private static void territoryNeverClaimsWater() {
+        Simulation sim = simulation(909L);
+        run(sim, 5f * 60f);
+
+        World world = sim.world();
+        Territory territory = sim.territory();
+        String problem = null;
+
+        outer:
+        for (int y = 0; y < world.height(); y++) {
+            for (int x = 0; x < world.width(); x++) {
+                if (world.tileAtUnsafe(x, y).isWater() && territory.ownerAt(x, y) != Territory.UNCLAIMED) {
+                    problem = "água reivindicada em (" + x + "," + y + ")";
+                    break outer;
+                }
+            }
+        }
+        check("território nunca reivindica água", problem == null, problem);
+    }
+
+    private static void territoryRecomputeIsFastEnough() {
+        Simulation sim = simulation(12345L);
+        run(sim, 10f * 60f);
+        int population = sim.population();
+
+        long startedAt = System.nanoTime();
+        for (int i = 0; i < 30; i++) {
+            sim.territory().recompute(sim.creatures());
+        }
+        double msPerRecompute = (System.nanoTime() - startedAt) / 1_000_000.0 / 30.0;
+
+        // O recálculo só acontece uma vez por segundo (TERRITORY_RECOMPUTE_
+        // INTERVAL_SECONDS), então mesmo bem mais caro que um passo normal
+        // ele não pode custar perto de um segundo inteiro de quadros.
+        check("recálculo de território cabe folgado no intervalo de um segundo",
+                msPerRecompute < 50.0, String.format("%.2f ms", msPerRecompute));
+        System.out.printf("   (%.3f ms por recálculo com %d criaturas)%n", msPerRecompute, population);
     }
 
     // ----------------------------------------------------------------- apoio

@@ -5,6 +5,8 @@ import com.emannuel.mundovivo.sim.creature.CreatureConfig;
 import com.emannuel.mundovivo.sim.creature.CreaturePool;
 import com.emannuel.mundovivo.sim.creature.CreatureState;
 import com.emannuel.mundovivo.sim.ecology.FoodMap;
+import com.emannuel.mundovivo.sim.faction.FactionRegistry;
+import com.emannuel.mundovivo.sim.faction.Territory;
 import com.emannuel.mundovivo.sim.util.Rng;
 import com.emannuel.mundovivo.sim.world.World;
 
@@ -37,13 +39,28 @@ public final class Simulation {
      */
     public static final float MAX_STEP_SECONDS = 0.1f;
 
+    /**
+     * Intervalo entre recálculos de território.
+     *
+     * <p>O recálculo é uma busca em largura sobre o mapa inteiro — mesmo
+     * custo assintótico da rebrota de comida, O(tiles). Ainda assim, não há
+     * motivo para pagar isso a cada quadro: uma fronteira de território não
+     * precisa reagir em 16 ms a uma criatura que andou meio tile. Recalcular
+     * algumas vezes por segundo é imperceptível no jogo e barato no relógio
+     * — ver a medição em {@code SimSelfTest}.
+     */
+    public static final float TERRITORY_RECOMPUTE_INTERVAL_SECONDS = 1f;
+
     private final World world;
     private final FoodMap foodMap;
     private final CreaturePool pool;
     private final CreatureConfig config;
     private final Rng rng;
+    private final FactionRegistry factions = new FactionRegistry();
+    private final Territory territory;
 
     private float elapsedSeconds;
+    private float timeSinceTerritoryRecompute;
 
     private long births;
     private long deathsByStarvation;
@@ -56,11 +73,17 @@ public final class Simulation {
         this.config = config;
         this.foodMap = new FoodMap(world);
         this.pool = new CreaturePool(config.maxCreatures);
+        this.territory = new Territory(world);
         // Semente derivada da do mundo: dois mundos iguais geram a mesma
         // história, e mundos diferentes não compartilham a sequência.
         this.rng = new Rng(world.seed() ^ 0x5EED_1EAFL);
 
         spawnInitialPopulation();
+        // Território calculado uma vez de saída: sem isso, o mapa fica sem
+        // dono nenhum até o primeiro passo completar o intervalo de
+        // recálculo, e um mundo recém-nascido já tem gente que reivindica
+        // terra, não uma terra de ninguém por um segundo inteiro.
+        territory.recompute(pool);
     }
 
     public World world() {
@@ -77,6 +100,14 @@ public final class Simulation {
 
     public CreatureConfig config() {
         return config;
+    }
+
+    public FactionRegistry factions() {
+        return factions;
+    }
+
+    public Territory territory() {
+        return territory;
     }
 
     public float elapsedSeconds() {
@@ -121,6 +152,15 @@ public final class Simulation {
         // faz uma criatura ser pulada ou processada duas vezes.
         for (int i = pool.activeCount() - 1; i >= 0; i--) {
             stepCreature(pool.activeAt(i), dt);
+        }
+
+        timeSinceTerritoryRecompute += dt;
+        if (timeSinceTerritoryRecompute >= TERRITORY_RECOMPUTE_INTERVAL_SECONDS) {
+            territory.recompute(pool);
+            // Subtrai em vez de zerar: um dt levemente maior que o
+            // intervalo não faz o próximo recálculo esperar um intervalo
+            // inteiro de novo, só o que sobrou.
+            timeSinceTerritoryRecompute -= TERRITORY_RECOMPUTE_INTERVAL_SECONDS;
         }
     }
 
@@ -247,13 +287,24 @@ public final class Simulation {
         float y = tile / world.width() + 0.5f;
 
         // Pool cheio devolve null: é o teto de população, não um erro.
-        if (pool.spawn(x, y, config.newbornHunger, 0f) != null) {
+        Creature child = pool.spawn(x, y, config.newbornHunger, 0f);
+        if (child != null) {
             births++;
+            // Herda a facção de um dos pais, sorteado. Os dois quase sempre
+            // são da mesma facção — a busca por parceiro tende a achar
+            // vizinhos, e vizinhos descendem de gente próxima — mas nada
+            // aqui impede um casal de facções diferentes, e não há um jeito
+            // óbvio de "misturar" dois ids em um terceiro, então o filho
+            // simplesmente puxa um dos dois com metade de chance cada.
+            int childFaction = rng.chance(0.5f) ? a.factionId : b.factionId;
+            child.factionId = childFaction;
+            factions.join(childFaction);
         }
     }
 
     private void die(Creature c) {
         foodMap.deposit(currentTile(c), config.corpseFoodValue);
+        factions.leave(c.factionId);
         pool.despawn(c);
     }
 
@@ -432,6 +483,10 @@ public final class Simulation {
                 break;
             }
             c.age = rng.range(0f, config.adultAgeSeconds * 1.5f);
+            // Ninguém nasce com pais no povoamento inicial: cada fundador
+            // recebe uma facção só sua. É daqui que saem as primeiras
+            // fronteiras de território, antes de qualquer descendência.
+            c.factionId = factions.create();
             spawned++;
         }
     }

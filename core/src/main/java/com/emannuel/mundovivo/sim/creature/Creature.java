@@ -47,6 +47,15 @@ public final class Creature {
     /** Segundos restantes até poder reproduzir de novo. */
     public float reproductionCooldown;
 
+    /**
+     * Facção a que pertence: herdada de um dos pais, ou nova ao nascer sem
+     * eles — hoje, só a população inicial do mundo. -1 é o valor de um
+     * slot que ainda não recebeu vida nenhuma; nenhuma criatura ativa deve
+     * carregar esse valor. Quem atribui é {@code Simulation}, não o pool:
+     * o pool não sabe o que é uma facção, só devolve um slot em branco.
+     */
+    public int factionId = -1;
+
     Creature(int slot) {
         this.slot = slot;
     }
@@ -67,6 +76,7 @@ public final class Creature {
         this.targetTile = -1;
         this.targetMateSlot = -1;
         this.reproductionCooldown = cooldown;
+        this.factionId = -1;
     }
 
     public int tileX() {
@@ -101,6 +111,7 @@ public final class Creature {
                 + " em (" + String.format("%.1f", x) + "," + String.format("%.1f", y) + ")"
                 + " fome=" + String.format("%.2f", hunger)
                 + " vida=" + String.format("%.2f", health)
-                + " idade=" + String.format("%.0f", age) + "s}";
+                + " idade=" + String.format("%.0f", age) + "s"
+                + " facção=" + factionId + "}";
     }
 }

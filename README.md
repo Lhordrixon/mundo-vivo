@@ -19,7 +19,7 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 3. Criaturas com máquina de estados | pronto e testado |
 | 3b. Comida por tile, com rebrota | pronto e testado |
 | 3c. Pool de criaturas sem alocação | pronto e testado |
-| 4. Facções e território | não começou |
+| 4. Facções e território | pronto e testado |
 | 5. Save/load | não começou |
 | 6. Poderes de deus | não começou |
 | 7. IA de guerra | não começou |
@@ -35,6 +35,13 @@ A cor de cada criatura mostra o que ela está fazendo: branco vagando,
 amarelo procurando comida, verde comendo, rosa procurando parceiro. É o que
 torna a simulação legível de relance — dá para ver o amarelo se espalhar
 por uma região antes de a população cair ali.
+
+Por baixo, cada criatura também já pertence a uma facção, herdada dos pais,
+e o mundo já sabe de quem é cada tile de terra — o território de cada
+facção, recalculado algumas vezes por segundo. Isso ainda não aparece na
+tela: não há bandeira, nem cor de facção, nem fronteira desenhada. É
+território no sentido de dado da simulação, pronto para o sistema de
+guerra usar; a parte visual fica para quando `render/` for a vez.
 
 Toque longo descarta o mundo e gera outro — atalho de desenvolvimento, sai
 quando a interface de verdade entrar.
@@ -105,6 +112,7 @@ core/
     world/     tipos de tile, configuração, mundo, gerador
     creature/  criatura, estados, pool, parâmetros
     ecology/   comida por tile e rebrota
+    faction/   registro de facções e território por proximidade
     util/      RNG determinístico
   render/      desenho e câmera — a única parte que conhece libGDX
 android/       launcher e empacotamento do APK
@@ -194,6 +202,55 @@ limiar simplesmente não reproduz. É um regime mais estável que o da fome
 matando em massa, e é bom saber disso antes de mexer nos números: baixar a
 rebrota não vai matar mais criaturas, vai fazer nascerem menos.
 
+### Como funcionam facções e território
+
+Toda criatura pertence a uma facção. A população inicial funda uma facção
+para cada indivíduo — sem pais para herdar de quem, cada fundador começa a
+sua própria linhagem. Toda reprodução daí em diante herda: o filho puxa a
+facção de um dos dois pais, sorteado com metade de chance cada. Na prática
+os dois pais quase sempre já são da mesma facção — a busca por parceiro
+tende a achar vizinhos, e vizinhos descendem de gente próxima —, mas nada
+impede um casal de facções diferentes, e não existe um jeito óbvio de
+"misturar" dois ids em um terceiro. Nenhuma facção nova é fundada depois do
+povoamento inicial: `FactionRegistry.factionCount()` fica constante para o
+resto do jogo, e todo mundo remonta a um dos fundadores — é isso que o
+teste `noNewFactionsAfterInitialFounding` trava.
+
+Território é o conjunto de tiles mais próximos dos membros vivos de cada
+facção — mas "mais próximo" aqui é distância percorrida por tiles
+caminháveis vizinhos, não linha reta. Duas criaturas nos dois lados de uma
+baía não deviam dividir a água ao meio: cada uma levaria muito tempo para
+contornar até essa fronteira "mais próxima" corresponder a alguma coisa no
+chão. Contar passos pelo grafo de tiles caminháveis resolve isso de graça —
+a água nunca é atravessada, então o território de cada lado cresce
+contornando a baía, do jeito que uma criatura realmente andaria.
+
+O cálculo é uma busca em largura multi-fonte: todos os membros vivos de
+todas as facções entram na fila ao mesmo tempo, e o primeiro a alcançar um
+tile decide o dono. Isso é O(tiles), não O(tiles × criaturas) — a diferença
+entre varrer o mundo padrão uma vez (49 mil operações) e varrê-lo uma vez
+por criatura viva (algumas dezenas de milhões, com a população de
+meio-jogo). Os arrays de apoio são pré-alocados no tamanho do mundo e
+reaproveitados a cada recálculo, então recalcular não aloca memória nova.
+Tiles de água nunca são alcançados e ficam sem dono, e um empate exato de
+distância (acontece nas pontas de uma baía contornada dos dois lados) vai
+para quem apareceu primeiro na lista de criaturas vivas — arbitrário, mas
+determinístico, que é o que importa.
+
+Recalcular o mundo inteiro é barato (0,33 ms com pouco mais de 200
+criaturas, medido em `SimSelfTest`), mas ainda assim não há motivo para
+pagar isso a cada quadro: uma fronteira de território não precisa reagir em
+16 ms a uma criatura que andou meio tile. `Simulation` recalcula uma vez
+por segundo (`TERRITORY_RECOMPUTE_INTERVAL_SECONDS`), a mesma lógica que já
+existia para não recalcular coisa cara todo frame sem necessidade.
+
+Duas coisas que este sistema **não** faz, de propósito, porque não foram
+pedidas ainda: território não influencia nenhuma decisão de criatura hoje —
+ninguém evita terra de outra facção, ninguém briga por fronteira — e não há
+nada desenhado na tela. É dado de simulação, testado sem abrir janela
+nenhuma, esperando o sistema 7 (guerra) para importar de verdade e o
+`render/` para virar mapa colorido.
+
 ---
 
 ## Ferramentas de apoio
@@ -232,16 +289,23 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 
 - Todo o código, incluindo `render/` e os dois launchers, compila com
   `-Xlint:all` sem um único aviso.
-- As 40 verificações de `SimSelfTest` passam. Mundo: determinismo por
+- As 55 verificações de `SimSelfTest` passam. Mundo: determinismo por
   semente, sementes diferentes divergindo, todo tile com tipo válido,
   elevação sempre em [0,1], proporção terra/mar jogável em 6 sementes,
   presença de oceano profundo e de montanha, geração em 18 ms. Comida:
   mundo novo na capacidade, rebrota respeitando o teto, consumo limitado ao
   que existe, água sem comida. Pool: contagens coerentes, mil nascimentos
   em dez slots, remoção do meio sem perder ninguém, morte dupla ignorada.
-  Simulação: mesma semente com a mesma história criatura por criatura,
-  ninguém saindo do mundo nem pisando na água, fome e vida sempre em [0,1],
-  passo gigante cortado, comida caindo com o pastoreio.
+  Facções: ids sequenciais, fundador nasce com um membro, join/leave
+  corretos, extinção sem ir negativo, id inexistente lança exceção.
+  Território: mundo novo sem dono nenhum, uma criatura reivindica tudo que
+  alcança, corredor reto divide exatamente na metade, água nunca é
+  reivindicada, busca contorna água e resolve empate pela ordem do pool.
+  Simulação: mesma semente com a mesma história criatura por criatura
+  (facção incluída), ninguém saindo do mundo nem pisando na água, fome e
+  vida sempre em [0,1], passo gigante cortado, comida caindo com o
+  pastoreio, nenhuma facção nova depois da fundação inicial, todo dono de
+  território é uma facção que existe, território nunca reivindica água.
 - A saída visual do mundo foi conferida: mapas em várias sementes, com
   continentes, cordilheiras com neve no cume, litoral e calota polar.
 - Comportamento da população: 12 sementes rodadas por 30 minutos
@@ -253,6 +317,9 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   com passos grossos cada visita a um tile rende uma mordida maior.
 - Custo de um passo: 0,04 ms com ~200 criaturas e 0,086 ms com 2100, em um
   quadro que tem 16,6 ms. A simulação não é o gargalo.
+- Custo de um recálculo de território: 0,33 ms com pouco mais de 200
+  criaturas em um mundo padrão (49 mil tiles) — bem abaixo do segundo
+  inteiro de folga que o intervalo de recálculo dá.
 
 **Não verificado:**
 
@@ -302,7 +369,23 @@ Registrada de propósito, para não virar surpresa:
 - **Criaturas andam em linha reta.** Não há busca de caminho: quando o
   passo seguinte cairia na água, ele é recusado e a criatura escolhe outro
   destino. Funciona, mas uma criatura pode levar tempo para contornar uma
-  baía. Entra junto com o sistema de território.
+  baía. O sistema de território não resolve isto: o BFS de `Territory` só
+  decide de quem é cada tile, não guia ninguém — o movimento continua sem
+  busca de caminho nenhuma.
+- **Recálculo de território é sempre do mundo inteiro.** Uma vez por
+  segundo, os 49 mil tiles são todos revisitados, mesmo quando quase
+  nenhuma criatura se moveu desde o recálculo anterior — o mesmo tipo de
+  desperdício já anotado para a rebrota de comida, e a mesma correção
+  serviria: recalcular uma fatia por vez.
+- **Território não influencia decisão nenhuma de criatura.** Hoje é
+  informação pura: ninguém evita terra de outra facção, ninguém disputa
+  fronteira. É o levantamento que falta antes de o sistema 7 (guerra) ter
+  do que se alimentar.
+- **Herança de facção num casal de facções diferentes é uma moeda cara.**
+  Metade de chance para cada pai, sem meio-termo. Funciona porque hoje isso
+  quase nunca acontece — vizinhos tendem a ser parentes —, mas quando a
+  guerra ou fronteiras fechadas entrarem, pode valer a pena decidir se um
+  casal assim deveria sequer poder reproduzir.
 - **Temperatura e umidade são descartadas após a geração.** Só a elevação
   fica guardada. Quando o crescimento de vegetação ou a migração sazonal
   entrarem, elas terão que ser recalculadas ou armazenadas.
@@ -322,13 +405,16 @@ Registrada de propósito, para não virar surpresa:
 **Antes de qualquer código novo: rodar `./gradlew desktop:run`.** É a única
 parte do projeto que nunca foi provada, e continuar empilhando sistemas
 sobre uma camada gráfica não verificada só aumenta o tamanho do estrago se
-algo lá estiver errado.
+algo lá estiver errado. Isso ainda vale depois do sistema 4: facções e
+território são só `sim/`, não tocaram em `render/`, e essa dívida não foi
+paga por eles.
 
-Depois disso, sistema 4: facções. Cada criatura passa a pertencer a um
-grupo, herdado dos pais; cada grupo ocupa um território, que é o conjunto
-de tiles mais próximos dos seus membros. Vai em `sim/`, com testes, antes
-de existir qualquer bandeira desenhada na tela — pela mesma razão de
-sempre: o que é testável sem tela deve ser escrito sem tela.
+Depois disso, sistema 5: save/load. `World`, `FoodMap`, `CreaturePool` e
+agora `FactionRegistry`/`Territory` guardam estado simples o bastante para
+serializar; falta decidir o formato e escrever o carregamento — e conferir
+que um mundo recarregado recalcula o mesmo território que tinha antes de
+salvar, já que ele deriva da posição das criaturas em vez de ser salvo
+como tal.
 
-O território é também o que destrava o sistema 7 (guerra), porque disputa
-precisa de uma fronteira para acontecer.
+O sistema 7 (guerra) segue dependendo do território para ter uma fronteira
+para disputar — agora existe; falta a IA que decida atacá-la.
