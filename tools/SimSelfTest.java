@@ -136,7 +136,9 @@ public final class SimSelfTest {
         hugeTimeStepIsClamped();
         foodRespondsToGrazing();
         simulationStepIsFastEnough();
-        foundersEachGetTheirOwnFaction();
+        theWorldFoundsAHandfulOfKingdoms();
+        foundingKingdomsAreSpatiallyCoherent();
+        foundingIsDeterministic();
         noNewFactionsAfterInitialFounding();
         territoryOwnersAreValidFactionsOrUnclaimed();
         territoryNeverClaimsWater();
@@ -909,15 +911,70 @@ public final class SimSelfTest {
         System.out.printf("   (%.3f ms por passo com %d criaturas)%n", msPerStep, population);
     }
 
-    private static void foundersEachGetTheirOwnFaction() {
+    private static void theWorldFoundsAHandfulOfKingdoms() {
         Simulation sim = simulation(2222L);
         Set<Integer> seen = new HashSet<>();
+        int semFaccao = 0;
         for (int i = 0; i < sim.population(); i++) {
-            seen.add(sim.creatures().activeAt(i).factionId);
+            int id = sim.creatures().activeAt(i).factionId;
+            if (id < 0) {
+                semFaccao++;
+            }
+            seen.add(id);
         }
-        check("cada criatura fundadora nasce em uma facção só sua",
-                seen.size() == sim.population() && sim.factions().factionCount() == sim.population(),
-                seen.size() + " facções para " + sim.population() + " fundadoras");
+        int soma = 0;
+        for (int f = 0; f < sim.factions().factionCount(); f++) {
+            soma += sim.factions().memberCountOf(f);
+        }
+        check("o mundo funda poucos reinos, não um por fundador",
+                sim.factions().factionCount() == sim.config().initialFactions
+                        && seen.size() > 1
+                        && seen.size() <= sim.config().initialFactions
+                        && semFaccao == 0
+                        && soma == sim.population(),
+                seen.size() + " facções para " + sim.population() + " fundadoras, "
+                        + "membros somados=" + soma);
+    }
+
+    private static void foundingKingdomsAreSpatiallyCoherent() {
+        Simulation sim = simulation(2222L);
+        int n = sim.population();
+        int compatriotas = 0;
+        for (int i = 0; i < n; i++) {
+            Creature a = sim.creatures().activeAt(i);
+            Creature maisPerto = null;
+            float menor = Float.MAX_VALUE;
+            for (int k = 0; k < n; k++) {
+                if (k == i) {
+                    continue;
+                }
+                Creature b = sim.creatures().activeAt(k);
+                float d = a.distanceTo(b);
+                if (d < menor) {
+                    menor = d;
+                    maisPerto = b;
+                }
+            }
+            if (maisPerto != null && maisPerto.factionId == a.factionId) {
+                compatriotas++;
+            }
+        }
+        float fracao = n == 0 ? 0f : (float) compatriotas / n;
+        check("os reinos nascem contíguos: o vizinho mais próximo é compatriota",
+                fracao > 0.8f, Math.round(fracao * 100) + "% de vizinhos compatriotas");
+    }
+
+    private static void foundingIsDeterministic() {
+        Simulation first = simulation(31337L);
+        Simulation second = simulation(31337L);
+        boolean ok = first.population() == second.population();
+        for (int i = 0; ok && i < first.population(); i++) {
+            Creature a = first.creatures().activeAt(i);
+            Creature b = second.creatures().activeAt(i);
+            ok = a.factionId == b.factionId && a.x == b.x && a.y == b.y;
+        }
+        check("a mesma semente funda os mesmos reinos nos mesmos lugares", ok,
+                "duas fundações da semente 31337 divergiram");
     }
 
     private static void noNewFactionsAfterInitialFounding() {

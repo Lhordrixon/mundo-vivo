@@ -12,17 +12,18 @@ package com.emannuel.mundovivo.sim.creature;
  * diferentes, e duas execuções a 30 e a 60 quadros divergem criatura por
  * criatura desde os primeiros segundos. O que se mantém é o comportamento
  * agregado — medido em doze sementes a vinte minutos, a população média
- * ficou em 532, 479 e 458 a 30, 60 e 90 quadros, sem nenhuma extinção nas
+ * ficou em 218, 176 e 200 a 30, 60 e 90 quadros, sem nenhuma extinção nas
  * 36 execuções. A dispersão entre taxas existe porque passos grossos rendem
  * mordidas maiores por visita a um tile.
  *
- * <p>Eles valem para o estado de hoje e foram remedidos depois que as
- * facções passaram a nascer com nome e cor. Fundar uma facção gasta um sorteio, 240
- * deles no início do mundo, então a sequência inteira anda para frente e
- * cada semente conta outra história — as médias eram 538, 445 e 403 antes
- * disso. É variação de sorteio, não de comportamento: qualquer mudança que
- * consuma o sorteador em outra ordem move estes valores, e por isso eles
- * são referência de ordem de grandeza, não constantes a defender.
+ * <p>Estes valores são referência de ordem de grandeza, não constantes a
+ * defender: qualquer mudança que consuma o sorteador em outra ordem os
+ * move. Já mudaram duas vezes por isso — quando as facções ganharam nome e
+ * cor (eram 538/445/403 antes), e de novo quando o mundo passou a fundar
+ * poucos reinos contíguos. Desta última vez a mudança não foi só de
+ * sorteio: com o combate corpo a corpo valendo, a fronteira entre reinos
+ * cobra vidas, e a população de equilíbrio caiu para cerca de um terço do
+ * que era sem combate.
  *
  * <p><b>Estes números foram remedidos depois das espécies, e um deles teve
  * que mudar por causa delas.</b> Restringir o acasalamento a pares da mesma
@@ -56,15 +57,33 @@ public final class CreatureConfig {
      * é o que devolve a densidade de cada espécie ao que era a densidade
      * total: com 240, a média a 60 quadros volta para 479.
      *
-     * <p>Não é um botão neutro: cada fundador funda a sua própria facção,
-     * então dobrar este número dobra as facções iniciais — o que o
-     * {@code FactionRegistry} e o {@code Territory} absorvem sem limite
-     * nenhum, mas que muda o retrato do mapa de territórios. Desde que
-     * facção passou a nascer com nome e cor, dobrar este número também
-     * dobra os sorteios gastos na fundação, o que desloca a sequência do
-     * {@code Rng} para todo o resto da simulação.
+     * <p>Este número já foi acoplado à contagem de facções: cada fundador
+     * fundava a própria, e dobrá-lo dobrava os reinos. Não é mais — quem
+     * decide quantos reinos existem é {@link #initialFactions}, e mudar a
+     * população só muda quantos habitantes cada reino recebe.
      */
     public int initialPopulation = 240;
+
+    /**
+     * Quantas facções o mundo funda, e portanto quantos reinos existem.
+     *
+     * <p>Eram 240 — uma por fundador — até ficar medido que isso não
+     * sustenta nada. Com uma facção por indivíduo, todo vizinho é
+     * estrangeiro: não há "dentro do reino", só 240 pontos isolados que se
+     * ignoram (ou, quando existe combate, se matam). Agora os fundadores
+     * são repartidos entre poucos reinos contíguos, e a maior parte dos
+     * vizinhos de alguém é da mesma facção — que é o que faz território
+     * significar alguma coisa.
+     *
+     * <p>O número foi escolhido por medição, não por gosto: ver a tabela
+     * de varredura no README. Poucos reinos grandes deixam o mapa sem
+     * fronteiras interessantes; muitos reinos pequenos recriam o problema
+     * dos 240.
+     *
+     * <p>Pedir mais reinos que fundadores não é erro: funda-se quantos
+     * couberem. Um mundo de uma criatura tem um reino.
+     */
+    public int initialFactions = 4;
 
     // --- metabolismo ---
 
@@ -203,6 +222,7 @@ public final class CreatureConfig {
         CreatureConfig c = new CreatureConfig();
         c.maxCreatures = maxCreatures;
         c.initialPopulation = initialPopulation;
+        c.initialFactions = initialFactions;
         c.hungerPerSecond = hungerPerSecond;
         c.starvationDamagePerSecond = starvationDamagePerSecond;
         c.hazardDamagePerSecond = hazardDamagePerSecond;
@@ -233,6 +253,11 @@ public final class CreatureConfig {
         require(maxCreatures > 0, "maxCreatures deve ser > 0");
         require(initialPopulation >= 0 && initialPopulation <= maxCreatures,
                 "initialPopulation deve caber em maxCreatures");
+        // Só o mínimo. Pedir mais reinos que fundadores não é erro: o
+        // povoamento funda quantos couberem (um mundo de uma criatura tem um
+        // reino). Recusar isso quebraria mundos pequenos legítimos, como os
+        // dos testes, sem proteger de nada.
+        require(initialFactions > 0, "initialFactions deve ser > 0");
         require(hungerPerSecond > 0f, "hungerPerSecond deve ser > 0");
         require(hazardDamagePerSecond >= 0f,
                 "hazardDamagePerSecond não pode ser negativa, senão terreno perigoso cura");

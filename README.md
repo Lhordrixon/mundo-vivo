@@ -25,6 +25,7 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 3c. Pool de criaturas sem alocação | pronto e testado |
 | 4. Facções e território | pronto e testado |
 | 4b. Nome e cor por facção | pronto e testado, sem consumidor na tela |
+| 4c. Fundação de reinos contíguos | pronto e testado |
 | 5. Save/load | não começou |
 | 6. Poderes de deus | não começou |
 | 7. IA de guerra | não começou |
@@ -405,17 +406,84 @@ errar o alvo é parte de mirar.
 
 ### Como funcionam facções e território
 
-Toda criatura pertence a uma facção. A população inicial funda uma facção
-para cada indivíduo — sem pais para herdar de quem, cada fundador começa a
-sua própria linhagem. Toda reprodução daí em diante herda: o filho puxa a
+Toda criatura pertence a uma facção. O mundo funda um punhado de reinos
+(`CreatureConfig.initialFactions`, hoje 4) e reparte os fundadores entre
+eles por proximidade. Toda reprodução daí em diante herda: o filho puxa a
 facção de um dos dois pais, sorteado com metade de chance cada. Na prática
 os dois pais quase sempre já são da mesma facção — a busca por parceiro
-tende a achar vizinhos, e vizinhos descendem de gente próxima —, mas nada
+tende a achar vizinhos, e vizinhos agora nascem compatriotas —, mas nada
 impede um casal de facções diferentes, e não existe um jeito óbvio de
 "misturar" dois ids em um terceiro. Nenhuma facção nova é fundada depois do
 povoamento inicial: `FactionRegistry.factionCount()` fica constante para o
 resto do jogo, e todo mundo remonta a um dos fundadores — é isso que o
 teste `noNewFactionsAfterInitialFounding` trava.
+
+#### Por que poucos reinos contíguos, e não um por fundador
+
+Até aqui cada fundador fundava a própria facção: 240 reinos de um membro,
+salpicados pelo mapa. Parecia inofensivo — território era só informação, e
+nada lia facção para decidir coisa nenhuma. Mas isso escondia que a
+estrutura não significava nada: **o vizinho mais próximo de alguém quase
+nunca era compatriota**, então "meu povo" não existia como região, só como
+uma etiqueta por indivíduo.
+
+A conta chegou quando o combate corpo a corpo entrou. Com todo vizinho
+sendo estrangeiro, qualquer encontro virava briga, e as seis sementes
+testadas extinguiam. Medido, ficou claro que o problema não era o combate
+estar forte: era a fundação estar errada desde o começo.
+
+`Simulation.placeFactionCentres` agora escolhe uma capital por reino e cada
+fundador entra na facção da capital mais próxima:
+
+- **Capitais bem espaçadas.** Para cada centro, sorteia 12 tiles
+  caminháveis e fica com o mais distante dos centros já escolhidos — a
+  heurística do melhor candidato de Mitchell. É barata, determinística e
+  espalha muito melhor que sorteio puro, sem o viés de grade que fatiar o
+  mapa criaria.
+- **Fronteiras de graça.** Cada fundador na capital mais próxima dá as
+  células de Voronoi dos centros, que são contíguas por construção. Não
+  há passo de suavização nem BFS aqui: a distância é em linha reta, então
+  um fundador do outro lado de uma baía pode cair num reino que não
+  alcança a pé. Isso é aceitável porque é só a semente — o território de
+  verdade é recalculado pelo BFS, que respeita o terreno.
+
+O efeito medido: **95–98% das criaturas nascem com o vizinho mais próximo
+na mesma facção**, contra praticamente zero antes. É o teste
+`foundingKingdomsAreSpatiallyCoherent` que trava isso, e é a propriedade
+inteira da mudança — sem ela, reino é etiqueta, não lugar.
+
+A quantidade de reinos foi escolhida medindo, em 6 sementes a 20 minutos.
+Primeiro sem combate, para saber se agrupar por si só custa população:
+
+| reinos | população média | extinções | nascimentos |
+|---|---|---|---|
+| 4 | 475 (229–622) | 0/6 | 15.342 |
+| 5 | 369 (171–592) | 0/6 | 15.258 |
+| 6 | 361 (165–523) | 0/6 | 14.779 |
+
+Não custa: o mundo antigo de 240 facções salpicadas dava 432 e 15.864, e
+entre 4 e 6 a diferença é quase toda variação de semente.
+
+Depois com o combate corpo a corpo ligado, que é o que não funcionava
+antes:
+
+| reinos | população média | extinções | nascimentos | mortes em combate |
+|---|---|---|---|---|
+| 3 | 166 (38–314) | 0/6 | 8.188 | 492 |
+| **4** | **158 (33–238)** | **0/6** | **8.471** | **538** |
+| 5 | 143 (23–321) | 0/6 | 6.716 | 620 |
+| 6 | 164 (24–290) | 0/6 | 6.912 | 653 |
+| 8 | 77 (4–177) | 0/6 | 5.065 | 724 |
+
+Nenhuma configuração extingue — contra 6/6 extinções com as 240 facções
+salpicadas. **Quatro reinos** é o padrão porque ganha nas duas medições
+independentes: a maior população sem combate (475) e a melhor pior-semente
+com combate (33 contra 23 e 24). A partir de 8 o mundo começa a ficar
+frágil: a pior semente termina com 4 criaturas vivas.
+
+O preço honesto do combate está nessa tabela: a população de equilíbrio cai
+de ~432 para ~158, cerca de um terço. Não é bug, é a fronteira cobrando —
+e agora ela cobra sem matar o mundo, que era o ponto.
 
 Território é o conjunto de tiles mais próximos dos membros vivos de cada
 facção — mas "mais próximo" aqui é distância percorrida por tiles
@@ -549,7 +617,7 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 
 - Todo o código, incluindo `render/` e os dois launchers, compila com
   `-Xlint:all` sem um único aviso.
-- As 79 verificações de `SimSelfTest` passam. Mundo: determinismo por
+- As 89 verificações de `SimSelfTest` passam. Mundo: determinismo por
   semente, sementes diferentes divergindo, todo tile com tipo válido,
   elevação sempre em [0,1], proporção terra/mar jogável em 6 sementes,
   presença de oceano profundo e de montanha, geração em 18 ms. Comida:
@@ -571,6 +639,11 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   oceano profundo é perigoso, golpe do jogador fere quem está no tile,
   golpes repetidos matam pelo caminho de morte compartilhado, golpe em
   tile vazio e golpe fora do mundo não fazem nada nem estouram.
+  Fundação de reinos: o mundo funda o número pedido de facções e não uma
+  por fundador, ninguém nasce sem facção, a soma dos membros bate com a
+  população, os reinos saem contíguos (mais de 80% com o vizinho mais
+  próximo na mesma facção) e a mesma semente funda os mesmos reinos nos
+  mesmos lugares.
   Simulação: mesma semente com a mesma história criatura por criatura
   (facção incluída), ninguém saindo do mundo nem pisando na água, fome e
   vida sempre em [0,1], passo gigante cortado, comida caindo com o
@@ -579,17 +652,17 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   mundo gerado normal sem nenhuma morte por dano de terreno.
 - A saída visual do mundo foi conferida: mapas em várias sementes, com
   continentes, cordilheiras com neve no cume, litoral e calota polar.
-- Comportamento da população, **remedido depois do nome e da cor de
-  facção**: 12 sementes a 20 minutos e 60 quadros, populações finais entre
-  285 e 742, média 479, **nenhuma extinção e nenhuma batida no teto do
-  pool**. Com 120 fundadores e duas espécies a média é 63 — ver a seção
-  sobre espécies.
-- Estabilidade por taxa de quadros, **remedida depois do nome e da cor de
-  facção**: 12 sementes a 20 minutos, população média de 532, 479 e 458 a
-  30, 60 e 90 quadros por segundo, **sem nenhuma extinção nas 36
-  execuções**. Com 120 fundadores e duas espécies as médias são 142, 63 e
-  66. A dispersão entre taxas continua existindo — passos grossos rendem
-  mordidas maiores — mas é variação, não diferença entre viver e morrer.
+- Comportamento da população, **remedido com os reinos contíguos e o
+  combate valendo**: 12 sementes a 20 minutos e 60 quadros, populações
+  finais entre 33 e 448, média 176, **nenhuma extinção e nenhuma batida no
+  teto do pool**.
+- Estabilidade por taxa de quadros, **remedida com os reinos contíguos e o
+  combate valendo**: 12 sementes a 20 minutos, população média de 218, 176
+  e 200 a 30, 60 e 90 quadros por segundo, **sem nenhuma extinção nas 36
+  execuções**. A dispersão entre taxas continua existindo — passos grossos
+  rendem mordidas maiores — mas é variação, não diferença entre viver e
+  morrer. Os números caíram para cerca de um terço do que eram sem
+  combate (532/479/458): é a fronteira cobrando, não uma regressão.
 - Custo de um passo: 0,064 ms com 403 criaturas e 0,090 ms com o pool
   cheio (3000), em um quadro que tem 16,6 ms. A simulação não é o gargalo.
 - Custo de um recálculo de território, que roda uma vez por segundo: 0,284
@@ -667,14 +740,13 @@ Registrada de propósito, para não virar surpresa:
   quase nunca acontece — vizinhos tendem a ser parentes —, mas quando a
   guerra ou fronteiras fechadas entrarem, pode valer a pena decidir se um
   casal assim deveria sequer poder reproduzir.
-- **O mundo nasce com 240 facções, uma por fundador.** Não é defeito de
-  implementação — `FactionRegistry` e `Territory` absorvem isso sem teto,
-  conferido — mas é um retrato estranho: 240 "reinos" de uma criatura cada,
-  que vão morrendo até sobrarem os que se reproduziram. Agora que cada uma
-  tem nome e cor, isso ficou mais visível, não menos: são 240 nomes para
-  240 indivíduos. Quando facção ganhar consequência de verdade,
-  provavelmente vai fazer mais sentido fundar poucas e grandes do que uma
-  por indivíduo.
+- ~~**O mundo nasce com 240 facções, uma por fundador.**~~ Resolvido: o
+  mundo funda cinco reinos contíguos e reparte os fundadores entre eles.
+  A previsão que estava escrita aqui — "provavelmente vai fazer mais
+  sentido fundar poucas e grandes do que uma por indivíduo" — se
+  confirmou, e pelo motivo mais caro possível: foi o que impediu o
+  combate corpo a corpo de funcionar. Ver "Por que poucos reinos
+  contíguos" acima.
 - **Nome e cor de facção não são desenhados em lugar nenhum.**
   `FactionRegistry.nameOf` e `colorOf` existem, são determinísticos e têm
   teste, mas quem chama hoje são só os testes. O consumidor natural é um

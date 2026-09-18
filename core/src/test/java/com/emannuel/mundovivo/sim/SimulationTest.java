@@ -613,20 +613,98 @@ class SimulationTest {
     // ------------------------------------------------------------ facções
 
     @Test
-    @DisplayName("cada criatura fundadora nasce em uma facção só sua")
-    void foundersEachGetTheirOwnFaction() {
+    @DisplayName("o mundo funda poucos reinos, não um por fundador")
+    void theWorldFoundsAHandfulOfKingdoms() {
         Simulation sim = simulation(2222L);
 
         Set<Integer> seen = new HashSet<>();
+        int semFaccao = 0;
+        int somaDosMembros = 0;
         for (int i = 0; i < sim.population(); i++) {
-            seen.add(sim.creatures().activeAt(i).factionId);
+            int id = sim.creatures().activeAt(i).factionId;
+            if (id < 0) {
+                semFaccao++;
+            }
+            seen.add(id);
         }
+        for (int f = 0; f < sim.factions().factionCount(); f++) {
+            somaDosMembros += sim.factions().memberCountOf(f);
+        }
+        // Cópias finais: assertAll exige que a lambda só capture efetivamente
+        // final, e as duas acima são somadas dentro dos laços.
+        final int semFaccaoFinal = semFaccao;
+        final int somaFinal = somaDosMembros;
 
         assertAll(
-                () -> assertEquals(sim.population(), seen.size(),
-                        "duas criaturas fundadoras compartilhando facção"),
-                () -> assertEquals(sim.population(), sim.factions().factionCount())
+                () -> assertEquals(sim.config().initialFactions,
+                        sim.factions().factionCount(),
+                        "fundou um número de facções diferente do pedido"),
+                () -> assertTrue(seen.size() > 1, "o mundo inteiro caiu numa facção só"),
+                () -> assertTrue(seen.size() <= sim.config().initialFactions,
+                        "apareceu facção fora das fundadas"),
+                () -> assertEquals(0, semFaccaoFinal, "fundador nasceu sem facção"),
+                () -> assertEquals(sim.population(), somaFinal,
+                        "a soma dos membros não bate com a população")
         );
+    }
+
+    @Test
+    @DisplayName("os reinos nascem contíguos: o vizinho mais próximo é quase sempre compatriota")
+    void foundingKingdomsAreSpatiallyCoherent() {
+        // É a propriedade inteira da mudança. Com uma facção por fundador
+        // este número ficava perto de zero, e era isso que tornava
+        // território um retalho sem significado.
+        Simulation sim = simulation(2222L);
+        int n = sim.population();
+
+        int compatriotas = 0;
+        for (int i = 0; i < n; i++) {
+            Creature a = sim.creatures().activeAt(i);
+            Creature maisPerto = null;
+            float menor = Float.MAX_VALUE;
+            for (int k = 0; k < n; k++) {
+                if (k == i) {
+                    continue;
+                }
+                Creature b = sim.creatures().activeAt(k);
+                float d = a.distanceTo(b);
+                if (d < menor) {
+                    menor = d;
+                    maisPerto = b;
+                }
+            }
+            if (maisPerto != null && maisPerto.factionId == a.factionId) {
+                compatriotas++;
+            }
+        }
+
+        float fracao = (float) compatriotas / n;
+        assertTrue(fracao > 0.8f,
+                "só " + Math.round(fracao * 100) + "% têm o vizinho mais próximo"
+                        + " na mesma facção — os reinos não saíram contíguos");
+    }
+
+    @Test
+    @DisplayName("a mesma semente funda os mesmos reinos nos mesmos lugares")
+    void foundingIsDeterministic() {
+        Simulation first = simulation(31337L);
+        Simulation second = simulation(31337L);
+
+        String problem = null;
+        if (first.population() != second.population()) {
+            problem = "populações diferentes";
+        } else {
+            for (int i = 0; i < first.population() && problem == null; i++) {
+                Creature a = first.creatures().activeAt(i);
+                Creature b = second.creatures().activeAt(i);
+                if (a.factionId != b.factionId) {
+                    problem = "fundador " + i + " caiu em facções diferentes";
+                } else if (a.x != b.x || a.y != b.y) {
+                    problem = "fundador " + i + " nasceu em lugares diferentes";
+                }
+            }
+        }
+        assertNull(problem, String.valueOf(problem));
     }
 
     @Test
