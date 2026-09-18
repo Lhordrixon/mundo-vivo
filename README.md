@@ -32,7 +32,7 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 10. Primeiro poder do jogador: toque que fere | pronto e testado |
 | 11. Espécie herdável, com acasalamento restrito | pronto e testado |
 
-O que roda hoje: o app abre, gera um mundo de 256x192 tiles, espalha 120
+O que roda hoje: o app abre, gera um mundo de 256x192 tiles, espalha 240
 criaturas pela terra firme e as deixa viver. Elas procuram comida, comem,
 procuram parceiro, se reproduzem, envelhecem e morrem — de fome ou de
 velhice. A comida cresce de volta conforme a fertilidade do bioma, então a
@@ -215,11 +215,14 @@ reproduz. É um regime mais estável que o da fome matando em massa, e é bom
 saber disso antes de mexer nos números: baixar a rebrota não vai matar mais
 criaturas, vai fazer nascerem menos.
 
-**Isso valia até a espécie entrar, e mudou.** Hoje a comida não é mais o que
-limita: sobra comida no mapa e a população fica pequena assim mesmo, porque
-o gargalo virou encontrar parceiro da mesma espécie. Os números estão na
-seção sobre espécies, logo abaixo, e são a coisa mais importante a saber
-antes de mexer em qualquer parâmetro de população.
+**A espécie quase tirou o mundo desse regime, e o número de fundadores o
+trouxe de volta.** Com 120 fundadores e duas espécies, sobrava comida no
+mapa (99% intocada) e a população definhava mesmo assim: o gargalo tinha
+virado encontrar parceiro. Com 240, a comida volta a ser consumida — cai
+para 66–77% e oscila — e as mortes por fome voltam a existir (679 e 1086 em
+quarenta minutos, contra 19 antes). A história está na seção sobre
+espécies, logo abaixo, e é a coisa mais importante a saber antes de mexer
+em qualquer parâmetro de população.
 
 ### Como as espécies se separam
 
@@ -237,45 +240,60 @@ aparecem na tela. A única coisa que uma espécie faz hoje é decidir quem pode
 ter filho com quem. Nome evocativo prometeria predação e cultura que o código
 não tem — e este projeto já pagou caro por promessa não cumprida.
 
-**O efeito colateral é grande e precisa ser lido antes de qualquer
-rebalanceamento.** Separar a reprodução em duas espécies reduziu a população
-de equilíbrio em cerca de sete vezes. Medido isolando a causa — mesma
-semente, mesmo sorteador, mesmo código, mudando só se o filtro barra alguém:
+**A espécie custou caro antes de ser paga, e a conta vale ser lida por
+inteiro** — porque é ela que explica por que o mundo nasce com 240
+criaturas e não com 120.
+
+Separar a reprodução em duas espécies reduziu a população de equilíbrio em
+cerca de sete vezes. Medido isolando a causa: mesma semente, mesmo
+sorteador, mesmo código, mudando só se o filtro barra alguém.
 
 | | população média a 20 min | pior semente |
 |---|---|---|
 | Uma espécie (filtro inerte) | 470 | 63 |
-| Duas espécies | 63 | 2 |
+| Duas espécies, 120 fundadores | 63 | 2 |
 
-O mecanismo não é o raio de busca: alargá-lo de 70 para 105, 140 ou 175 tiles
-não recupera nada (médias de 70, 55 e 49, e extinções aparecendo nos raios
-maiores). O gargalo é outro — a qualquer instante só um punhado de criaturas
-está em `SEEKING_MATE` ao mesmo tempo, e exigir espécie igual corta esse
-punhado ao meio. Elas não estão longe demais; estão procurando em momentos
-diferentes.
+O mecanismo não é o raio de busca: alargá-lo de 70 para 105, 140 ou 175
+tiles não recupera nada (médias de 70, 55 e 49, e extinções aparecendo nos
+raios maiores). O gargalo é outro — a qualquer instante só um punhado de
+criaturas está em `SEEKING_MATE` ao mesmo tempo, e exigir espécie igual
+corta esse punhado ao meio. Elas não estão longe demais; estão procurando
+em momentos diferentes.
 
-A consequência é uma **troca de regime**: o mundo deixou de ser limitado por
-comida e passou a ser limitado por parceiro. Com duas espécies sobra comida
-no mapa (9318 de 9381 ao fim de 40 minutos, contra 7919 com uma espécie) e
-ainda assim morre mais gente de velhice do que nasce. O README dizia que
-baixar a rebrota faria nascerem menos criaturas em vez de matá-las; isso
-continua verdade, mas hoje a rebrota não é mais o que decide o tamanho da
-população.
+**A correção foi dobrar os fundadores, e só isso.** Se o problema é
+densidade de candidatos simultâneos, o conserto honesto é devolver a
+densidade — não alargar o raio (não funciona) nem encurtar a espera entre
+reproduções, que exagera para o outro lado (média 927, contra os ~470 de
+antes). Com `initialPopulation` em 240, cada espécie volta a ter a
+densidade que a população inteira tinha antes. Medido em 12 sementes, 20
+minutos simulados:
 
-Duas alavancas foram medidas, caso valha rebalancear (nenhuma foi aplicada —
-é decisão de jogo, não de implementação):
+| quadros por segundo | 120 fundadores | 240 fundadores |
+|---|---|---|
+| 30 | média 83, 1 extinção | **média 538**, 0 extinções (337–892) |
+| 60 | média 61, 0 extinções | **média 445**, 0 extinções (209–769) |
+| 90 | média 68, 2 extinções | **média 403**, 0 extinções (92–745) |
 
-| Ajuste | população média a 20 min, 6 sementes |
-|---|---|
-| Como está | 58 |
-| `initialPopulation` 120 → 240 | 441 |
-| `reproductionCooldownSeconds` 55 → 27 | 927 |
-| Os dois juntos | 941 |
+Nenhuma das 36 execuções com 240 fundadores extinguiu, nenhuma bateu no
+teto do pool, e a média a 60 quadros (445) ficou onde estava antes de
+existir espécie (470). A dispersão entre taxas também voltou a ser
+aceitável: 538/445/403, contra 173/89/63 do mundo de 120.
 
-Dobrar a população inicial devolve praticamente o regime antigo (441 contra
-os 470 de uma espécie só) e tira as sementes da beira da extinção — mas não é
-um botão neutro: cada fundador funda uma facção, então dobrar fundadores
-dobra o número de facções, e isso mexe no sistema de território junto.
+E o regime voltou junto. Com 120 fundadores a comida ficava intocada (99%
+do total ao fim de 40 minutos) enquanto a população definhava — sinal de
+que o gargalo não era comida. Com 240 a comida é consumida de novo, cai
+para 66–77% e oscila, e as mortes por fome voltam a aparecer: 679 e 1086 em
+quarenta minutos, contra 19 antes. O mundo voltou a ser limitado por
+comida, pela natalidade, que é o regime que este projeto quer.
+
+**O preço do conserto:** cada fundador funda a sua própria facção, então
+dobrar fundadores dobra as facções iniciais — 240 em vez de 120. Isso foi
+conferido antes de aplicar: nem o `FactionRegistry` nem o `Territory` têm
+teto ou suposição de contagem (o registro dobra o array conforme precisa, o
+território guarda o id como um inteiro qualquer no tile), e na prática as
+240 facções nascem todas com um membro, 237 delas com território, zero
+tiles com dono inválido. O que muda de verdade é o retrato: o mapa de
+territórios nasce com o dobro de retalhos.
 
 ### Como a vida é tirada
 
@@ -477,23 +495,22 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   mundo gerado normal sem nenhuma morte por dano de terreno.
 - A saída visual do mundo foi conferida: mapas em várias sementes, com
   continentes, cordilheiras com neve no cume, litoral e calota polar.
-- Comportamento da população, **medido de novo depois das espécies**: 12
-  sementes a 20 minutos, populações finais entre 2 e 158, média 61, nenhuma
-  batida no teto do pool. Os números antigos desta linha (entre 334 e 1082,
-  nenhuma extinção) eram de antes da espécie existir e não valem mais — ver
-  a seção sobre espécies para o porquê e para o tamanho do efeito.
-- Estabilidade por taxa de quadros, **remedida depois das espécies**: 8
-  sementes a 20 minutos, população média de 173, 89, 63 e 73 a 20, 30, 60 e
-  90 quadros por segundo. A dispersão entre taxas piorou muito: antes das
-  espécies as médias ficavam todas perto de 460 e nenhuma semente extinguia;
-  agora duas extinguem em alguma taxa (a semente 99 a 30 e a 90 quadros, a
-  4242 a 90). O jogo continua sendo o mesmo a 30 e a 60 quadros no que é
-  determinístico, mas a população deixou de ser robusta o bastante para a
-  diferença entre taxas não importar.
-- Custo de um passo: 0,037 ms com 67 criaturas e 0,086 ms com 2100, em um
-  quadro que tem 16,6 ms. A simulação não é o gargalo. (A medição de ~200
-  criaturas saiu da lista porque a semente que a produzia não chega mais
-  a essa população — o custo por criatura não mudou.)
+- Comportamento da população, **remedido com 240 fundadores**: 12 sementes a
+  20 minutos e 60 quadros, populações finais entre 209 e 769, média 445,
+  **nenhuma extinção e nenhuma batida no teto do pool**. Com 120 fundadores
+  e duas espécies a média era 61, com sementes chegando a 2 — ver a seção
+  sobre espécies.
+- Estabilidade por taxa de quadros, **remedida com 240 fundadores**: 12
+  sementes a 20 minutos, população média de 538, 445 e 403 a 30, 60 e 90
+  quadros por segundo, **sem nenhuma extinção nas 36 execuções**. Com 120
+  fundadores e duas espécies as médias eram 83, 61 e 68, e três execuções
+  extinguiam (a semente 99 a 30 e a 90 quadros, a 4242 a 90). A dispersão
+  entre taxas continua existindo — passos grossos rendem mordidas maiores —
+  mas voltou a ser variação, não diferença entre viver e morrer.
+- Custo de um passo: 0,070 ms com 452 criaturas e 0,086 ms com 2100, em um
+  quadro que tem 16,6 ms. A simulação não é o gargalo. O recálculo de
+  território, que roda uma vez por segundo, custa 0,347 ms com 452
+  criaturas.
 - Custo de um recálculo de território: 0,33 ms com pouco mais de 200
   criaturas em um mundo padrão (49 mil tiles) — bem abaixo do segundo
   inteiro de folga que o intervalo de recálculo dá.
@@ -567,13 +584,12 @@ Registrada de propósito, para não virar surpresa:
   quase nunca acontece — vizinhos tendem a ser parentes —, mas quando a
   guerra ou fronteiras fechadas entrarem, pode valer a pena decidir se um
   casal assim deveria sequer poder reproduzir.
-- **A população ficou frágil depois das espécies.** Medido: média 61 em
-  12 sementes a 20 minutos, contra ~470 antes, e duas sementes extinguem
-  em alguma taxa de quadros (99 a 30 e 90, 4242 a 90). O mundo saiu do
-  regime limitado por comida, que era o desejado, e entrou em um regime
-  limitado por encontro de parceiro. Os números e as alavancas medidas
-  estão na seção sobre espécies; nenhuma foi aplicada, porque escolher o
-  tamanho da população é decisão de jogo.
+- **O mundo nasce com 240 facções, uma por fundador.** Não é defeito de
+  implementação — `FactionRegistry` e `Territory` absorvem isso sem teto,
+  conferido — mas é um retrato estranho: 240 "reinos" de uma criatura cada,
+  que vão morrendo até sobrarem os que se reproduziram. Quando as facções
+  ganharem nome, cor e consequência, provavelmente vai fazer mais sentido
+  fundar poucas e grandes do que uma por indivíduo.
 - **Dano de terreno não tem gatilho em jogo.** Nada hoje transforma o
   chão debaixo de uma criatura, então a via existe testada mas ociosa: ela
   é a base para o sistema 6 (poderes de deus) e o 7 (guerra), não uma

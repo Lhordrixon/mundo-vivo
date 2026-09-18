@@ -10,21 +10,26 @@ package com.emannuel.mundovivo.sim.creature;
  * <p>Vale ser exato sobre o que isso garante. A história exata <em>muda</em>
  * com a taxa de quadros: passos diferentes consomem o sorteador em ordens
  * diferentes, e duas execuções a 30 e a 60 quadros divergem criatura por
- * criatura desde os primeiros segundos. O que se mantinha era o
- * comportamento agregado.
+ * criatura desde os primeiros segundos. O que se mantém é o comportamento
+ * agregado — medido em doze sementes a vinte minutos, a população média
+ * ficou em 538, 445 e 403 a 30, 60 e 90 quadros, sem nenhuma extinção nas
+ * 36 execuções. A dispersão entre taxas existe porque passos grossos rendem
+ * mordidas maiores por visita a um tile.
  *
- * <p><b>Estes números foram calibrados antes de existir espécie, e a
- * espécie os invalidou.</b> Com o acasalamento restrito a pares da mesma
- * espécie, a população de equilíbrio caiu cerca de sete vezes e a dispersão
- * entre taxas de quadros piorou: medido em oito sementes a vinte minutos, a
- * média ficou em 173, 89, 63 e 73 a 20, 30, 60 e 90 quadros, e duas
- * sementes chegam a extinguir em alguma taxa. Antes, nenhuma extinguia e as
- * médias ficavam todas perto de 460.
+ * <p><b>Estes números foram remedidos depois das espécies, e um deles teve
+ * que mudar por causa delas.</b> Restringir o acasalamento a pares da mesma
+ * espécie cortou pela metade a densidade de candidatos simultâneos, e com
+ * os 120 fundadores originais a população desabava: média 61 a 60 quadros,
+ * sementes chegando a 2 sobreviventes, três execuções extinguindo. A
+ * correção foi dobrar {@link #initialPopulation}, devolvendo a cada espécie
+ * a densidade que a população inteira tinha antes — e não alargar
+ * {@link #mateSearchRadiusTiles}, que não recupera nada, nem encurtar
+ * {@link #reproductionCooldownSeconds}, que exagera para o outro lado.
  *
- * <p>Ou seja: os valores abaixo continuam sendo um ponto de partida medido,
- * mas medido para um mundo de uma espécie só. O mundo de hoje é limitado
- * por encontro de parceiro, não por comida, e rebalanceá-lo é trabalho em
- * aberto — o README traz as alavancas já medidas, na seção sobre espécies.
+ * <p>Os valores abaixo continuam sendo um ponto de partida medido, não uma
+ * verdade. O mundo voltou a ser limitado por comida, pela natalidade: a
+ * comida cai para 66–77% do total e oscila, em vez de ficar intocada como
+ * ficava quando o gargalo era encontrar parceiro.
  */
 public final class CreatureConfig {
 
@@ -33,8 +38,21 @@ public final class CreatureConfig {
     /** Teto rígido de criaturas vivas. Define o tamanho do pool. */
     public int maxCreatures = 3000;
 
-    /** Quantas criaturas nascem junto com o mundo. */
-    public int initialPopulation = 120;
+    /**
+     * Quantas criaturas nascem junto com o mundo.
+     *
+     * <p>Eram 120 até as espécies entrarem. Com o acasalamento restrito a
+     * pares da mesma espécie, 120 fundadores viravam dois grupos de ~60 e a
+     * população desabava — medido, média 61 contra ~470 de antes, com
+     * sementes chegando a 2 sobreviventes. Dobrar os fundadores é o que
+     * devolve a densidade de cada espécie ao que era a densidade total.
+     *
+     * <p>Não é um botão neutro: cada fundador funda a sua própria facção,
+     * então dobrar este número dobra as facções iniciais — o que o
+     * {@code FactionRegistry} e o {@code Territory} absorvem sem limite
+     * nenhum, mas que muda o retrato do mapa de territórios.
+     */
+    public int initialPopulation = 240;
 
     // --- metabolismo ---
 
