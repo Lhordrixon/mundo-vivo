@@ -65,9 +65,20 @@ public final class Simulation {
     private float timeSinceTerritoryRecompute;
 
     private long births;
+    /**
+     * Candidatos sorteados por centro de facção. Mais candidatos espalham
+     * melhor e custam mais sorteios; uma dúzia já separa bem sem pesar no
+     * povoamento, que roda uma vez por mundo.
+     */
+    private static final int CENTRE_CANDIDATES = 12;
+
+    /** Tentativas de achar terra firme para um candidato antes de desistir dele. */
+    private static final int CENTRE_PLACEMENT_ATTEMPTS = 200;
+
     private long deathsByStarvation;
     private long deathsByOldAge;
     private long deathsByExternalDamage;
+    private long deathsByCombat;
 
     public Simulation(World world, CreatureConfig config) {
         config.validate();
@@ -141,6 +152,18 @@ public final class Simulation {
         return deathsByExternalDamage;
     }
 
+    /**
+     * Mortes em combate corpo a corpo.
+     *
+     * <p>Contada à parte de {@link #deathsByExternalDamage} de propósito:
+     * aquela conta o que o mundo e o jogador fazem à criatura, esta conta o
+     * que as criaturas fazem umas às outras. Somá-las apagaria justamente a
+     * distinção que a causa do dano existe para preservar.
+     */
+    public long deathsByCombat() {
+        return deathsByCombat;
+    }
+
     // ------------------------------------------------------------------ passo
 
     /**
@@ -195,6 +218,20 @@ public final class Simulation {
         // alguém, que é para onde os poderes de deus e os desastres vão.
         if (tileUnder(c).hazardous()) {
             c.applyDamage(config.hazardDamagePerSecond * dt, Creature.CAUSE_HAZARDOUS_TERRAIN);
+        }
+
+        // Combate corpo a corpo. Depois do terreno pela mesma razão que o
+        // terreno vem depois da fome: quem morre com as duas coisas
+        // acontecendo é creditado à mais recente.
+        //
+        // Cada criatura toma o dano no próprio passo, em vez de bater na
+        // outra. Os dois jeitos dão a mesma troca simétrica, mas este não
+        // mexe na vida de ninguém que o laço ainda vai visitar — a morte
+        // continua sendo resolvida logo abaixo, para a criatura da vez,
+        // pelo caminho que já existia.
+        int hostiles = hostileNeighbours(c);
+        if (hostiles > 0) {
+            c.applyDamage(hostiles * config.combatDamagePerSecond * dt, Creature.CAUSE_COMBAT);
         }
 
         if (resolveDeathFromDamage(c)) {
@@ -373,8 +410,8 @@ public final class Simulation {
      * último dano.
      *
      * <p>O único lugar do jogo que transforma vida zerada em morte. Fome,
-     * terreno e golpe do jogador passam todos por aqui: a estatística é que
-     * se separa, não o caminho.
+     * terreno, golpe do jogador e combate passam todos por aqui: a
+     * estatística é que se separa, não o caminho.
      *
      * @return {@code true} se a criatura morreu nesta chamada
      */
@@ -384,6 +421,8 @@ public final class Simulation {
         }
         if (Creature.CAUSE_STARVATION.equals(c.lastDamageCause)) {
             deathsByStarvation++;
+        } else if (Creature.CAUSE_COMBAT.equals(c.lastDamageCause)) {
+            deathsByCombat++;
         } else {
             deathsByExternalDamage++;
         }
@@ -395,6 +434,74 @@ public final class Simulation {
         foodMap.deposit(currentTile(c), config.corpseFoodValue);
         factions.leave(c.factionId);
         pool.despawn(c);
+    }
+
+    /**
+     * Quantas criaturas vivas de outra facção estão ao alcance de combate.
+     *
+     * <p>Facção -1 não briga com ninguém, dos dois lados: é o valor de um
+     * slot que ainda não recebeu facção, não uma facção que difere de
+     * todas. Tratá-lo como inimigo faria uma criatura recém-nascida ser
+     * hostil ao mundo inteiro por um instante.
+     *
+     * <p><b>Quem está procurando parceiro não briga, dos dois lados.</b>
+     * {@link #resolveMate} filtra por espécie e nunca por facção, então o
+     * cortejo aproxima de propósito duas criaturas que, com uma facção por
+     * fundador, quase sempre são de facções diferentes — sem a trégua,
+     * toda tentativa de acasalamento vira um duelo.
+     *
+     * <p><b>A trégua ajuda e não basta, e isso está medido.</b> Em seis
+     * sementes a vinte minutos, ela levou os nascimentos de 277 para 384 —
+     * contra 15.864 sem combate nenhum — e as seis sementes continuam
+     * extinguindo. O motivo é que cortejar ocupa só 9,4% do tempo de uma
+     * criatura; nos outros 90,6% (79,5% vagando, 4,9% procurando comida,
+     * 6,2% comendo) ela está exposta, e com as facções salpicadas pelo mapa
+     * o simples vaguear já é letal: a população cai de 240 para 6 em quatro
+     * minutos simulados.
+     *
+     * <p>Ou seja, o duelo de acasalamento era parte do problema, não o
+     * problema. A causa de raiz é o mundo nascer com uma facção por
+     * fundador, todas salpicadas — dívida técnica já anotada no README, e
+     * o que o sistema de sociedade vai endereçar. Enquanto isso, combate
+     * não é habilitável no mundo gerado, e esta trégua é a parte da
+     * correção que já está de pé.
+     *
+     * <p>Compara distância ao quadrado para não tirar raiz: diferente de
+     * {@link #resolveMate}, que só roda para quem está procurando
+     * parceiro, esta varredura roda para <b>toda</b> criatura em
+     * <b>todo</b> passo, e é a parte mais cara da simulação hoje. A
+     * correção, quando doer, é a mesma já anotada como dívida técnica para
+     * a busca por parceiro: indexar as criaturas em uma grade espacial.
+     */
+    private int hostileNeighbours(Creature c) {
+        if (c.factionId < 0 || c.state == CreatureState.SEEKING_MATE) {
+            return 0;
+        }
+        float range = config.combatRangeTiles;
+        float rangeSquared = range * range;
+        int hostiles = 0;
+
+        for (int i = 0, n = pool.activeCount(); i < n; i++) {
+            Creature other = pool.activeAt(i);
+            if (other == c
+                    || other.factionId < 0
+                    || other.factionId == c.factionId
+                    || other.state == CreatureState.SEEKING_MATE) {
+                continue;
+            }
+            float dx = other.x - c.x;
+            if (dx > range || dx < -range) {
+                continue;
+            }
+            float dy = other.y - c.y;
+            if (dy > range || dy < -range) {
+                continue;
+            }
+            if (dx * dx + dy * dy <= rangeSquared) {
+                hostiles++;
+            }
+        }
+        return hostiles;
     }
 
     /**
@@ -562,6 +669,18 @@ public final class Simulation {
     // ------------------------------------------------------------- povoamento
 
     private void spawnInitialPopulation() {
+        if (config.initialPopulation <= 0) {
+            return;
+        }
+
+        int[] centreX = new int[config.initialFactions];
+        int[] centreY = new int[config.initialFactions];
+        int[] centreFaction = new int[config.initialFactions];
+        int centres = placeFactionCentres(centreX, centreY, centreFaction);
+        if (centres == 0) {
+            return; // mundo sem terra firme: não há onde fundar nada
+        }
+
         int spawned = 0;
         // Teto de tentativas: um mundo quase todo submerso não deve travar
         // o jogo procurando terra que não existe.
@@ -582,12 +701,10 @@ public final class Simulation {
                 break;
             }
             c.age = rng.range(0f, config.adultAgeSeconds * 1.5f);
-            // Ninguém nasce com pais no povoamento inicial: cada fundador
-            // recebe uma facção só sua. É daqui que saem as primeiras
-            // fronteiras de território, antes de qualquer descendência.
-            // O sorteador vai junto: nome e cor da facção saem da semente
-            // do mundo, como tudo mais.
-            c.factionId = factions.create(rng);
+            // A facção é a do centro mais próximo: quem nasce vizinho de
+            // alguém nasce compatriota dele. Ver placeFactionCentres.
+            c.factionId = centreFaction[nearestCentre(x, y, centreX, centreY, centres)];
+            factions.join(c.factionId);
             // Espécie sorteada por fundador. Sem isso o mundo nasceria de uma
             // espécie só e a regra de acasalamento nunca seria exercida — e o
             // sorteio precisa ser aqui, porque daqui em diante ninguém mais
@@ -595,6 +712,111 @@ public final class Simulation {
             c.species = Species.VALUES[rng.nextInt(Species.VALUES.length)];
             spawned++;
         }
+    }
+
+    /**
+     * Escolhe onde ficam as capitais dos reinos e funda as facções.
+     *
+     * <p><b>Por que existe.</b> Até aqui cada fundador fundava a própria
+     * facção, em posição aleatória: 240 reinos de um membro, salpicados. O
+     * efeito medido é que ninguém tem compatriota por perto — território
+     * vira retalho sem significado, e qualquer regra que dependa de "meu
+     * povo contra o seu" não tem de onde se agarrar.
+     *
+     * <p><b>O método.</b> Para cada centro, sorteia
+     * {@value #CENTRE_CANDIDATES} tiles caminháveis e fica com o que
+     * estiver mais longe dos centros já escolhidos — a heurística do
+     * melhor candidato de Mitchell. Serve porque é barata, determinística e
+     * não precisa de repulsão iterativa: com um punhado de candidatos por
+     * centro, já espalha bem melhor que sorteio puro, e não cria o viés de
+     * grade que dividir o mapa em fatias criaria.
+     *
+     * <p><b>E a fronteira.</b> Cada fundador entra na facção do centro mais
+     * próximo, então as regiões saem contíguas de graça: são as células de
+     * Voronoi dos centros. A distância aqui é em linha reta, não por tiles
+     * caminháveis como em {@link Territory} — um fundador do outro lado de
+     * uma baía pode acabar num reino que ele não alcança a pé. Isso é
+     * aceitável porque é só a semente: o território de verdade é recalculado
+     * pelo BFS, que respeita o terreno, e a população se redistribui
+     * andando. Usar BFS aqui custaria uma varredura do mundo por centro,
+     * para acertar um detalhe do instante zero.
+     *
+     * @return quantos centros foram realmente colocados
+     */
+    private int placeFactionCentres(int[] centreX, int[] centreY, int[] centreFaction) {
+        int wanted = Math.min(config.initialFactions, config.initialPopulation);
+        int placed = 0;
+
+        for (int i = 0; i < wanted; i++) {
+            int bestX = -1;
+            int bestY = -1;
+            long bestSpacing = -1L;
+
+            for (int candidate = 0; candidate < CENTRE_CANDIDATES; candidate++) {
+                int x = -1;
+                int y = -1;
+                for (int attempt = 0; attempt < CENTRE_PLACEMENT_ATTEMPTS; attempt++) {
+                    int tryX = rng.nextInt(world.width());
+                    int tryY = rng.nextInt(world.height());
+                    if (world.tileAtUnsafe(tryX, tryY).walkable()) {
+                        x = tryX;
+                        y = tryY;
+                        break;
+                    }
+                }
+                if (x < 0) {
+                    continue;
+                }
+                long spacing = spacingFrom(x, y, centreX, centreY, placed);
+                if (spacing > bestSpacing) {
+                    bestSpacing = spacing;
+                    bestX = x;
+                    bestY = y;
+                }
+            }
+
+            if (bestX < 0) {
+                break; // não achou terra firme; os centros já postos servem
+            }
+            centreX[placed] = bestX;
+            centreY[placed] = bestY;
+            centreFaction[placed] = factions.create(rng);
+            // create() já conta o fundador que ainda não existe; o povoamento
+            // chama join() para cada criatura, então descontamos aqui para a
+            // contagem de membros bater com a população de verdade.
+            factions.leave(centreFaction[placed]);
+            placed++;
+        }
+        return placed;
+    }
+
+    /** Distância ao quadrado até o centro já escolhido mais próximo. */
+    private static long spacingFrom(int x, int y, int[] centreX, int[] centreY, int placed) {
+        if (placed == 0) {
+            return Long.MAX_VALUE;
+        }
+        long nearest = Long.MAX_VALUE;
+        for (int i = 0; i < placed; i++) {
+            long dx = x - centreX[i];
+            long dy = y - centreY[i];
+            nearest = Math.min(nearest, dx * dx + dy * dy);
+        }
+        return nearest;
+    }
+
+    private static int nearestCentre(int x, int y, int[] centreX, int[] centreY, int centres) {
+        int best = 0;
+        long bestDistance = Long.MAX_VALUE;
+        for (int i = 0; i < centres; i++) {
+            long dx = x - centreX[i];
+            long dy = y - centreY[i];
+            long distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = i;
+            }
+        }
+        return best;
     }
 
     private static int clamp(int value, int min, int max) {
