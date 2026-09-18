@@ -434,6 +434,28 @@ public final class Simulation {
      * todas. Tratá-lo como inimigo faria uma criatura recém-nascida ser
      * hostil ao mundo inteiro por um instante.
      *
+     * <p><b>Quem está procurando parceiro não briga, dos dois lados.</b>
+     * {@link #resolveMate} filtra por espécie e nunca por facção, então o
+     * cortejo aproxima de propósito duas criaturas que, com uma facção por
+     * fundador, quase sempre são de facções diferentes — sem a trégua,
+     * toda tentativa de acasalamento vira um duelo.
+     *
+     * <p><b>A trégua ajuda e não basta, e isso está medido.</b> Em seis
+     * sementes a vinte minutos, ela levou os nascimentos de 277 para 384 —
+     * contra 15.864 sem combate nenhum — e as seis sementes continuam
+     * extinguindo. O motivo é que cortejar ocupa só 9,4% do tempo de uma
+     * criatura; nos outros 90,6% (79,5% vagando, 4,9% procurando comida,
+     * 6,2% comendo) ela está exposta, e com as facções salpicadas pelo mapa
+     * o simples vaguear já é letal: a população cai de 240 para 6 em quatro
+     * minutos simulados.
+     *
+     * <p>Ou seja, o duelo de acasalamento era parte do problema, não o
+     * problema. A causa de raiz é o mundo nascer com uma facção por
+     * fundador, todas salpicadas — dívida técnica já anotada no README, e
+     * o que o sistema de sociedade vai endereçar. Enquanto isso, combate
+     * não é habilitável no mundo gerado, e esta trégua é a parte da
+     * correção que já está de pé.
+     *
      * <p>Compara distância ao quadrado para não tirar raiz: diferente de
      * {@link #resolveMate}, que só roda para quem está procurando
      * parceiro, esta varredura roda para <b>toda</b> criatura em
@@ -442,7 +464,7 @@ public final class Simulation {
      * a busca por parceiro: indexar as criaturas em uma grade espacial.
      */
     private int hostileNeighbours(Creature c) {
-        if (c.factionId < 0) {
+        if (c.factionId < 0 || c.state == CreatureState.SEEKING_MATE) {
             return 0;
         }
         float range = config.combatRangeTiles;
@@ -451,7 +473,10 @@ public final class Simulation {
 
         for (int i = 0, n = pool.activeCount(); i < n; i++) {
             Creature other = pool.activeAt(i);
-            if (other == c || other.factionId < 0 || other.factionId == c.factionId) {
+            if (other == c
+                    || other.factionId < 0
+                    || other.factionId == c.factionId
+                    || other.state == CreatureState.SEEKING_MATE) {
                 continue;
             }
             float dx = other.x - c.x;

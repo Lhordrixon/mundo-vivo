@@ -124,6 +124,8 @@ public final class SimSelfTest {
         combatNeedsProximity();
         beingOutnumberedHurtsMore();
         combatDeathUsesTheSharedDeathPath();
+        courtingCreaturesAreOutOfTheFight();
+        theTruceEndsWithTheCourtship();
 
         System.out.println("\n-- Simulation --");
         simulationIsDeterministic();
@@ -1334,6 +1336,56 @@ public final class SimSelfTest {
         }
         check("estar em menor número mata mais rápido", um.health < dupla.health,
                 "sozinho=" + um.health + " acompanhado=" + dupla.health);
+    }
+
+    /** Adulta, saciada e sem espera: SEEKING_MATE se sustenta passo após passo. */
+    private static Creature courting(Simulation sim, float x, float y, int factionId) {
+        Creature c = sim.creatures().spawn(x, y, 0f, 0f);
+        c.factionId = factionId;
+        c.age = sim.config().adultAgeSeconds + 1f;
+        c.state = CreatureState.SEEKING_MATE;
+        return c;
+    }
+
+    private static void courtingCreaturesAreOutOfTheFight() {
+        Simulation sim = emptyGrassWorld(1234L);
+        Creature cortejando = courting(sim, 5.5f, 5.5f, sim.factions().create(new Rng(1L)));
+        Creature inimigo = fighter(sim, 5.9f, 5.5f, sim.factions().create(new Rng(2L)));
+        for (int i = 0; i < 60; i++) {
+            holdStill(cortejando, 5.5f, 5.5f);
+            holdStill(inimigo, 5.9f, 5.5f);
+            sim.step(STEP);
+        }
+        check("quem procura parceiro não briga nem apanha",
+                cortejando.state == CreatureState.SEEKING_MATE
+                        && cortejando.health == 1f && inimigo.health == 1f
+                        && sim.deathsByCombat() == 0L,
+                "estado=" + cortejando.state + " vidas="
+                        + cortejando.health + "/" + inimigo.health);
+    }
+
+    private static void theTruceEndsWithTheCourtship() {
+        Simulation sim = emptyGrassWorld(1234L);
+        Creature a = courting(sim, 5.5f, 5.5f, sim.factions().create(new Rng(1L)));
+        Creature b = fighter(sim, 5.9f, 5.5f, sim.factions().create(new Rng(2L)));
+        for (int i = 0; i < 30; i++) {
+            holdStill(a, 5.5f, 5.5f);
+            holdStill(b, 5.9f, 5.5f);
+            sim.step(STEP);
+        }
+        boolean intactoNoCortejo = a.health == 1f && b.health == 1f;
+
+        a.state = CreatureState.WANDERING;
+        a.reproductionCooldown = 9_999f;
+        for (int i = 0; i < 30; i++) {
+            holdStill(a, 5.5f, 5.5f);
+            holdStill(b, 5.9f, 5.5f);
+            sim.step(STEP);
+        }
+        check("a trégua acaba junto com o cortejo e a briga volta",
+                intactoNoCortejo && a.health < 1f && b.health < 1f
+                        && Creature.CAUSE_COMBAT.equals(a.lastDamageCause),
+                "no cortejo=" + intactoNoCortejo + " depois=" + a.health + "/" + b.health);
     }
 
     private static void combatDeathUsesTheSharedDeathPath() {

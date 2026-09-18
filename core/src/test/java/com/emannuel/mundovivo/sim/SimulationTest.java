@@ -825,6 +825,78 @@ class SimulationTest {
                         + " (vida=" + doisContra.health + ")");
     }
 
+    /**
+     * Adulta, saciada e sem espera: tudo que {@code canReproduce} exige, para
+     * o estado {@code SEEKING_MATE} se sustentar passo após passo em vez de
+     * cair de volta para {@code WANDERING} na primeira verificação.
+     */
+    private static Creature courting(Simulation sim, float x, float y, int factionId) {
+        Creature c = sim.creatures().spawn(x, y, 0f, 0f);
+        c.factionId = factionId;
+        c.age = sim.config().adultAgeSeconds + 1f;
+        c.state = CreatureState.SEEKING_MATE;
+        return c;
+    }
+
+    @Test
+    @DisplayName("quem procura parceiro não briga nem apanha, mesmo colado num inimigo")
+    void courtingCreaturesAreOutOfTheFight() {
+        Simulation sim = emptyGrassWorld(1234L);
+        int reino = sim.factions().create(new Rng(1L));
+        int outro = sim.factions().create(new Rng(2L));
+        Creature cortejando = courting(sim, 5.5f, 5.5f, reino);
+        Creature inimigo = fighter(sim, 5.9f, 5.5f, outro);
+
+        for (int i = 0; i < 60; i++) {
+            holdStill(cortejando, 5.5f, 5.5f);
+            holdStill(inimigo, 5.9f, 5.5f);
+            sim.step(STEP);
+        }
+
+        assertAll(
+                () -> assertEquals(CreatureState.SEEKING_MATE, cortejando.state,
+                        "saiu de SEEKING_MATE e o teste deixou de medir a trégua"),
+                () -> assertEquals(1f, cortejando.health, 1e-6f,
+                        "quem procura parceiro apanhou"),
+                () -> assertEquals(1f, inimigo.health, 1e-6f,
+                        "quem procura parceiro feriu alguém"),
+                () -> assertEquals(0L, sim.deathsByCombat())
+        );
+    }
+
+    @Test
+    @DisplayName("a trégua vale só enquanto o cortejo dura: ao sair do estado, a briga volta")
+    void theTruceEndsWithTheCourtship() {
+        Simulation sim = emptyGrassWorld(1234L);
+        int reino = sim.factions().create(new Rng(1L));
+        int outro = sim.factions().create(new Rng(2L));
+        Creature a = courting(sim, 5.5f, 5.5f, reino);
+        Creature b = fighter(sim, 5.9f, 5.5f, outro);
+
+        for (int i = 0; i < 30; i++) {
+            holdStill(a, 5.5f, 5.5f);
+            holdStill(b, 5.9f, 5.5f);
+            sim.step(STEP);
+        }
+        assertEquals(1f, a.health, 1e-6f, "a trégua já falhou antes do fim do cortejo");
+
+        // Desiste do cortejo: sem a trégua, os dois voltam a ser inimigos
+        // comuns e o dano de proximidade recomeça.
+        a.state = CreatureState.WANDERING;
+        a.reproductionCooldown = 9_999f;
+        for (int i = 0; i < 30; i++) {
+            holdStill(a, 5.5f, 5.5f);
+            holdStill(b, 5.9f, 5.5f);
+            sim.step(STEP);
+        }
+
+        assertAll(
+                () -> assertTrue(a.health < 1f, "a briga não voltou depois do cortejo"),
+                () -> assertTrue(b.health < 1f, "a briga não voltou para o outro lado"),
+                () -> assertEquals(Creature.CAUSE_COMBAT, a.lastDamageCause)
+        );
+    }
+
     @Test
     @DisplayName("morte em combate sai pelo mesmo caminho de morte da fome e do golpe")
     void combatDeathUsesTheSharedDeathPath() {
