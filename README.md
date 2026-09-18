@@ -24,6 +24,7 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 3b. Comida por tile, com rebrota | pronto e testado |
 | 3c. Pool de criaturas sem alocação | pronto e testado |
 | 4. Facções e território | pronto e testado |
+| 4b. Nome e cor por facção | pronto e testado, sem consumidor na tela |
 | 5. Save/load | não começou |
 | 6. Poderes de deus | não começou |
 | 7. IA de guerra | não começou |
@@ -253,6 +254,15 @@ sorteador, mesmo código, mudando só se o filtro barra alguém.
 | Uma espécie (filtro inerte) | 470 | 63 |
 | Duas espécies, 120 fundadores | 63 | 2 |
 
+Essa tabela é a medição de isolamento original, feita antes de as facções
+ganharem nome e cor. O nome e a cor gastam um sorteio por fundação, então a
+sequência inteira andou e cada semente conta outra história desde então — o
+braço "uma espécie" não foi remedido, porque reproduzi-lo exige desligar o
+filtro no código. Os números atuais das duas espécies estão na tabela
+abaixo. A conclusão não depende de qual das duas medições se olhe: o filtro
+de espécie derruba a população em cerca de uma ordem de grandeza, e é isso
+que os 240 fundadores pagam.
+
 O mecanismo não é o raio de busca: alargá-lo de 70 para 105, 140 ou 175
 tiles não recupera nada (médias de 70, 55 e 49, e extinções aparecendo nos
 raios maiores). O gargalo é outro — a qualquer instante só um punhado de
@@ -270,14 +280,26 @@ minutos simulados:
 
 | quadros por segundo | 120 fundadores | 240 fundadores |
 |---|---|---|
-| 30 | média 83, 1 extinção | **média 538**, 0 extinções (337–892) |
-| 60 | média 61, 0 extinções | **média 445**, 0 extinções (209–769) |
-| 90 | média 68, 2 extinções | **média 403**, 0 extinções (92–745) |
+| 30 | média 142, 0 extinções | **média 532**, 0 extinções (254–1023) |
+| 60 | média 63, 0 extinções | **média 479**, 0 extinções (285–742) |
+| 90 | média 66, 0 extinções | **média 458**, 0 extinções (271–853) |
 
 Nenhuma das 36 execuções com 240 fundadores extinguiu, nenhuma bateu no
-teto do pool, e a média a 60 quadros (445) ficou onde estava antes de
+teto do pool, e a média a 60 quadros (479) ficou onde estava antes de
 existir espécie (470). A dispersão entre taxas também voltou a ser
-aceitável: 538/445/403, contra 173/89/63 do mundo de 120.
+aceitável: 532/479/458, contra 142/63/66 do mundo de 120.
+
+**Estes números foram remedidos depois que as facções ganharam nome e
+cor,** e mudaram um pouco: fundar uma facção agora gasta um sorteio, 240
+deles no início do mundo, então a sequência inteira anda para frente e cada
+semente conta outra história. As médias com 240 fundadores saíram de
+538/445/403 para 532/479/458 — mesma ordem de grandeza, mesma conclusão.
+O que mudou de verdade foi o retrato dos 120: naquela medição três
+execuções extinguiam (as sementes 99 e 4242), e nesta nenhuma extingue, com
+médias de 142, 63 e 66. **Isso não quer dizer que 120 fundadores ficaram
+seguros** — quer dizer que a extinção ali sempre foi questão de sorteio, e
+que a diferença que sustenta a decisão continua sendo a mesma: uma ordem de
+grandeza entre 63 e 479 sobreviventes a 60 quadros.
 
 E o regime voltou junto. Com 120 fundadores a comida ficava intocada (99%
 do total ao fim de 40 minutos) enquanto a população definhava — sinal de
@@ -416,7 +438,7 @@ distância (acontece nas pontas de uma baía contornada dos dois lados) vai
 para quem apareceu primeiro na lista de criaturas vivas — arbitrário, mas
 determinístico, que é o que importa.
 
-Recalcular o mundo inteiro é barato (0,33 ms com pouco mais de 200
+Recalcular o mundo inteiro é barato (cerca de 0,3 ms com pouco mais de 350
 criaturas, medido em `SimSelfTest`), mas ainda assim não há motivo para
 pagar isso a cada quadro: uma fronteira de território não precisa reagir em
 16 ms a uma criatura que andou meio tile. `Simulation` recalcula uma vez
@@ -429,6 +451,65 @@ ninguém evita terra de outra facção, ninguém briga por fronteira — e não 
 nada desenhado na tela. É dado de simulação, testado sem abrir janela
 nenhuma, esperando o sistema 7 (guerra) para importar de verdade e o
 `render/` para virar mapa colorido.
+
+#### Nome e cor: por que uma facção deixou de ser um número
+
+Até aqui uma facção era um inteiro sequencial e nada mais. Em qualquer log
+ou tela ela apareceria como "facção 37", que é um índice, não um reino.
+Agora cada uma nasce batizada: `FactionRegistry.create(rng)` sorteia nome e
+tom no momento da fundação, e `nameOf(id)`/`colorOf(id)` devolvem isso pelo
+resto do jogo.
+
+**O sorteio vem do `Rng` da simulação, não de um `Random` próprio.** É a
+mesma regra que vale para o terreno e para a espécie: a semente do mundo
+decide tudo. O mundo da semente 12345 funda Garmar, Velstad, Ashfell,
+Nymran… nessa ordem, toda vez, em qualquer aparelho; o da semente 2026
+funda Tovrok, Dunrok, Varmar, Duneth. Um único `nextLong()` por facção
+alimenta nome e tom — um sorteio em vez de três, para mexer o mínimo
+possível na sequência que o resto da simulação consome.
+
+Os nomes saem de duas tabelas de sílabas inventadas (24 cabeças × 16
+caudas = 384 combinações), lidas de faixas de bits diferentes do mesmo
+sorteio. Com 240 fundadores há repetição, e tudo bem: dois reinos de uma
+criatura cada com o mesmo nome incomodam menos que "Reino 37". Unicidade
+entra quando facção virar entidade de verdade. As sílabas não remetem a
+nenhum povo real pela mesma razão que as espécies se chamam ALPHA e BETA —
+batizar de "Reino Élfico" prometeria cultura e diplomacia que o código não
+tem.
+
+**A cor é um `int` RGBA8888, não um `Color`.** Nada em `sim/` importa
+libGDX, e essa é a primeira das quatro decisões que sustentam o projeto: é
+o que permite rodar mundo e população inteiros sem abrir tela. O formato é
+o mesmo de `TileType.colorRgba8888()`, então a camada de desenho consome os
+dois do mesmo jeito. A conversão de HSV está escrita à mão dentro do
+próprio registro, por isso.
+
+**O matiz não é sorteado — é calculado.** Ele vem do índice da facção
+girado pelo inverso da razão áurea (0,618…), então cada facção nova cai a
+cerca de 137,5° da anterior no círculo de cor. Esse é o giro que maximiza a
+menor distância entre matizes para qualquer quantidade de facções. Sortear
+seria pior, não melhor: sorteio agrupa, e dois reinos com o mesmo tom de
+verde é exatamente o que se quer evitar. O que o sorteio decide é o par
+saturação/brilho, escolhido entre quatro — é o que separa duas facções que,
+com muitos reinos, acabaram em matizes vizinhos. Nenhum dos quatro pares é
+escuro: o fundo do jogo é quase preto, e cor escura sobre ele some.
+
+O que este esquema **não** garante, e vale dizer: a separação é no espaço
+de ids, não no mapa. Duas facções vizinhas *no terreno* podem ter ids
+distantes e, com azar, cores parecidas. Resolver isso exigiria olhar o
+território para escolher a cor — e o território é recalculado a cada
+segundo, então a cor mudaria junto, o que é pior que o problema. Com 240
+facções também não existem 240 cores que um olho humano separe; o objetivo
+é reino distinguível do vizinho na maioria dos casos, não paleta perfeita.
+
+**Ninguém desenha isso ainda.** `nameOf` e `colorOf` hoje só são chamados
+pelos testes — a tela de território não existe, e `CreatureRenderer`
+colore por *estado* da criatura, que é outro conceito. Isso é uma dívida
+declarada, não um descuido: o consumidor natural é o mapa de territórios,
+que está atrás do bloqueio arquitetural do sistema de sociedade. Está na
+lista de dívida técnica abaixo, e é o mesmo erro que `WorldRenderer.tileX`
+cometeu por meses — a diferença é que desta vez ele está escrito na
+página.
 
 ---
 
@@ -468,7 +549,7 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 
 - Todo o código, incluindo `render/` e os dois launchers, compila com
   `-Xlint:all` sem um único aviso.
-- As 74 verificações de `SimSelfTest` passam. Mundo: determinismo por
+- As 79 verificações de `SimSelfTest` passam. Mundo: determinismo por
   semente, sementes diferentes divergindo, todo tile com tipo válido,
   elevação sempre em [0,1], proporção terra/mar jogável em 6 sementes,
   presença de oceano profundo e de montanha, geração em 18 ms. Comida:
@@ -476,7 +557,10 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   que existe, água sem comida. Pool: contagens coerentes, mil nascimentos
   em dez slots, remoção do meio sem perder ninguém, morte dupla ignorada.
   Facções: ids sequenciais, fundador nasce com um membro, join/leave
-  corretos, extinção sem ir negativo, id inexistente lança exceção.
+  corretos, extinção sem ir negativo, id inexistente lança exceção, a mesma
+  semente fundando os mesmos nomes e as mesmas cores, sementes diferentes
+  divergindo, nome parecendo nome e não índice, cores opacas e espalhadas
+  pelo círculo de matiz, `nameOf`/`colorOf` recusando id inexistente.
   Território: mundo novo sem dono nenhum, uma criatura reivindica tudo que
   alcança, corredor reto divide exatamente na metade, água nunca é
   reivindicada, busca contorna água e resolve empate pela ordem do pool.
@@ -495,25 +579,24 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   mundo gerado normal sem nenhuma morte por dano de terreno.
 - A saída visual do mundo foi conferida: mapas em várias sementes, com
   continentes, cordilheiras com neve no cume, litoral e calota polar.
-- Comportamento da população, **remedido com 240 fundadores**: 12 sementes a
-  20 minutos e 60 quadros, populações finais entre 209 e 769, média 445,
-  **nenhuma extinção e nenhuma batida no teto do pool**. Com 120 fundadores
-  e duas espécies a média era 61, com sementes chegando a 2 — ver a seção
+- Comportamento da população, **remedido depois do nome e da cor de
+  facção**: 12 sementes a 20 minutos e 60 quadros, populações finais entre
+  285 e 742, média 479, **nenhuma extinção e nenhuma batida no teto do
+  pool**. Com 120 fundadores e duas espécies a média é 63 — ver a seção
   sobre espécies.
-- Estabilidade por taxa de quadros, **remedida com 240 fundadores**: 12
-  sementes a 20 minutos, população média de 538, 445 e 403 a 30, 60 e 90
-  quadros por segundo, **sem nenhuma extinção nas 36 execuções**. Com 120
-  fundadores e duas espécies as médias eram 83, 61 e 68, e três execuções
-  extinguiam (a semente 99 a 30 e a 90 quadros, a 4242 a 90). A dispersão
-  entre taxas continua existindo — passos grossos rendem mordidas maiores —
-  mas voltou a ser variação, não diferença entre viver e morrer.
-- Custo de um passo: 0,070 ms com 452 criaturas e 0,086 ms com 2100, em um
-  quadro que tem 16,6 ms. A simulação não é o gargalo. O recálculo de
-  território, que roda uma vez por segundo, custa 0,347 ms com 452
-  criaturas.
-- Custo de um recálculo de território: 0,33 ms com pouco mais de 200
-  criaturas em um mundo padrão (49 mil tiles) — bem abaixo do segundo
-  inteiro de folga que o intervalo de recálculo dá.
+- Estabilidade por taxa de quadros, **remedida depois do nome e da cor de
+  facção**: 12 sementes a 20 minutos, população média de 532, 479 e 458 a
+  30, 60 e 90 quadros por segundo, **sem nenhuma extinção nas 36
+  execuções**. Com 120 fundadores e duas espécies as médias são 142, 63 e
+  66. A dispersão entre taxas continua existindo — passos grossos rendem
+  mordidas maiores — mas é variação, não diferença entre viver e morrer.
+- Custo de um passo: 0,064 ms com 403 criaturas e 0,090 ms com o pool
+  cheio (3000), em um quadro que tem 16,6 ms. A simulação não é o gargalo.
+- Custo de um recálculo de território, que roda uma vez por segundo: 0,284
+  ms com 403 criaturas e 0,264 ms com 3000, em um mundo padrão de 49 mil
+  tiles — bem abaixo do segundo inteiro de folga que o intervalo dá. O custo
+  quase não depende da população porque a busca é multi-fonte: ela varre os
+  tiles uma vez, não uma vez por criatura.
 
 **Não verificado:**
 
@@ -587,9 +670,18 @@ Registrada de propósito, para não virar surpresa:
 - **O mundo nasce com 240 facções, uma por fundador.** Não é defeito de
   implementação — `FactionRegistry` e `Territory` absorvem isso sem teto,
   conferido — mas é um retrato estranho: 240 "reinos" de uma criatura cada,
-  que vão morrendo até sobrarem os que se reproduziram. Quando as facções
-  ganharem nome, cor e consequência, provavelmente vai fazer mais sentido
-  fundar poucas e grandes do que uma por indivíduo.
+  que vão morrendo até sobrarem os que se reproduziram. Agora que cada uma
+  tem nome e cor, isso ficou mais visível, não menos: são 240 nomes para
+  240 indivíduos. Quando facção ganhar consequência de verdade,
+  provavelmente vai fazer mais sentido fundar poucas e grandes do que uma
+  por indivíduo.
+- **Nome e cor de facção não são desenhados em lugar nenhum.**
+  `FactionRegistry.nameOf` e `colorOf` existem, são determinísticos e têm
+  teste, mas quem chama hoje são só os testes. O consumidor natural é um
+  mapa de territórios colorido, e esse está atrás do bloqueio do sistema de
+  sociedade. É a mesma situação de `WorldRenderer.tileX`, que ficou meses
+  escrito sem ser chamado — a diferença é que este está declarado aqui em
+  vez de esquecido.
 - **Dano de terreno não tem gatilho em jogo.** Nada hoje transforma o
   chão debaixo de uma criatura, então a via existe testada mas ociosa: ela
   é a base para o sistema 6 (poderes de deus) e o 7 (guerra), não uma

@@ -8,6 +8,7 @@ import com.emannuel.mundovivo.sim.ecology.FoodMap;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
 import com.emannuel.mundovivo.sim.noise.FractalNoise;
+import com.emannuel.mundovivo.sim.util.Rng;
 import com.emannuel.mundovivo.sim.world.TileType;
 import com.emannuel.mundovivo.sim.world.World;
 import com.emannuel.mundovivo.sim.world.WorldConfig;
@@ -81,6 +82,11 @@ public final class SimSelfTest {
         joinAndLeaveAdjustMemberCount();
         leaveDownToZeroMarksExtinctionWithoutGoingNegative();
         unknownFactionIdThrows();
+        sameSeedFoundsSameNamesAndColours();
+        differentSeedsFoundDifferentNames();
+        factionNameLooksLikeANameNotAnIndex();
+        factionColoursAreOpaqueAndSpreadOut();
+        nameOfAndColorOfRejectUnknownId();
 
         System.out.println("\n-- Territory --");
         emptyTerritoryStartsUnclaimed();
@@ -479,14 +485,16 @@ public final class SimSelfTest {
 
     private static void factionIdsAreSequential() {
         FactionRegistry factions = new FactionRegistry();
-        boolean ok = factions.create() == 0 && factions.create() == 1 && factions.create() == 2;
+        Rng rng = new Rng(1L);
+        boolean ok = factions.create(rng) == 0 && factions.create(rng) == 1
+                && factions.create(rng) == 2;
         check("ids de facção são sequenciais a partir de zero",
                 ok && factions.factionCount() == 3, "factionCount=" + factions.factionCount());
     }
 
     private static void newFactionStartsWithOneMember() {
         FactionRegistry factions = new FactionRegistry();
-        int id = factions.create();
+        int id = factions.create(new Rng(1L));
         check("facção nova nasce com um membro, o fundador",
                 factions.memberCountOf(id) == 1 && !factions.isExtinct(id),
                 "membros=" + factions.memberCountOf(id));
@@ -494,7 +502,7 @@ public final class SimSelfTest {
 
     private static void joinAndLeaveAdjustMemberCount() {
         FactionRegistry factions = new FactionRegistry();
-        int id = factions.create();
+        int id = factions.create(new Rng(1L));
         factions.join(id);
         factions.join(id);
         boolean afterJoins = factions.memberCountOf(id) == 3;
@@ -506,7 +514,7 @@ public final class SimSelfTest {
 
     private static void leaveDownToZeroMarksExtinctionWithoutGoingNegative() {
         FactionRegistry factions = new FactionRegistry();
-        int id = factions.create();
+        int id = factions.create(new Rng(1L));
         factions.leave(id);
         boolean extinctAtZero = factions.memberCountOf(id) == 0 && factions.isExtinct(id);
         factions.leave(id); // morte "sobrando": não deve derrubar abaixo de zero
@@ -517,13 +525,117 @@ public final class SimSelfTest {
 
     private static void unknownFactionIdThrows() {
         FactionRegistry factions = new FactionRegistry();
-        factions.create();
+        factions.create(new Rng(1L));
         boolean all = throwsOob(() -> factions.memberCountOf(-1))
                 && throwsOob(() -> factions.memberCountOf(1))
                 && throwsOob(() -> factions.join(99))
                 && throwsOob(() -> factions.leave(99));
         check("id de facção inexistente lança exceção em vez de devolver lixo", all,
                 "alguma chamada passou batido");
+    }
+
+    private static void sameSeedFoundsSameNamesAndColours() {
+        FactionRegistry first = new FactionRegistry();
+        FactionRegistry second = new FactionRegistry();
+        Rng rngA = new Rng(4242L);
+        Rng rngB = new Rng(4242L);
+        for (int i = 0; i < 240; i++) {
+            first.create(rngA);
+            second.create(rngB);
+        }
+        String problem = null;
+        for (int id = 0; id < 240 && problem == null; id++) {
+            if (!first.nameOf(id).equals(second.nameOf(id))) {
+                problem = "nome divergiu na facção " + id;
+            } else if (first.colorOf(id) != second.colorOf(id)) {
+                problem = "cor divergiu na facção " + id;
+            }
+        }
+        check("a mesma semente funda os mesmos nomes e as mesmas cores",
+                problem == null, String.valueOf(problem));
+    }
+
+    private static void differentSeedsFoundDifferentNames() {
+        FactionRegistry first = new FactionRegistry();
+        FactionRegistry second = new FactionRegistry();
+        Rng rngA = new Rng(1L);
+        Rng rngB = new Rng(2L);
+        int identical = 0;
+        for (int i = 0; i < 60; i++) {
+            int a = first.create(rngA);
+            int b = second.create(rngB);
+            if (first.nameOf(a).equals(second.nameOf(b))) {
+                identical++;
+            }
+        }
+        // Coincidência acontece: são 384 nomes possíveis. O que não pode é a
+        // semente não influenciar nada e os 60 saírem iguais.
+        check("sementes diferentes fundam nomes diferentes", identical < 20,
+                identical + "/60 nomes iguais entre duas sementes");
+    }
+
+    private static void factionNameLooksLikeANameNotAnIndex() {
+        FactionRegistry factions = new FactionRegistry();
+        Rng rng = new Rng(99L);
+        String problem = null;
+        for (int i = 0; i < 240 && problem == null; i++) {
+            String name = factions.nameOf(factions.create(rng));
+            if (name == null || name.length() < 4) {
+                problem = "nome curto demais: " + name;
+            } else if (name.matches(".*\\d.*")) {
+                problem = "nome com dígito, que é índice disfarçado: " + name;
+            } else if (!Character.isUpperCase(name.charAt(0))) {
+                problem = "nome sem maiúscula inicial: " + name;
+            }
+        }
+        check("o nome da facção parece nome, não índice", problem == null,
+                String.valueOf(problem));
+    }
+
+    private static void factionColoursAreOpaqueAndSpreadOut() {
+        FactionRegistry factions = new FactionRegistry();
+        Rng rng = new Rng(7L);
+        for (int i = 0; i < 240; i++) {
+            factions.create(rng);
+        }
+        // Alfa cheio: cor de reino translúcida sumiria no fundo quase preto.
+        boolean opaque = true;
+        for (int id = 0; id < 240; id++) {
+            opaque &= (factions.colorOf(id) & 0xFF) == 0xFF;
+        }
+        // Vizinhas em id têm que ser obviamente diferentes — é o que o giro
+        // pela razão áurea garante, e é a regressão que pegaria alguém
+        // trocando o espalhamento por um sorteio.
+        int tooClose = 0;
+        for (int id = 1; id < 240; id++) {
+            if (channelDistance(factions.colorOf(id - 1), factions.colorOf(id)) < 60) {
+                tooClose++;
+            }
+        }
+        check("cores de facção são opacas e bem espalhadas pelo círculo de matiz",
+                opaque && tooClose == 0,
+                "opacas=" + opaque + " pares quase iguais=" + tooClose);
+    }
+
+    private static void nameOfAndColorOfRejectUnknownId() {
+        FactionRegistry factions = new FactionRegistry();
+        factions.create(new Rng(1234L));
+        boolean all = throwsOob(() -> factions.nameOf(-1))
+                && throwsOob(() -> factions.nameOf(1))
+                && throwsOob(() -> factions.colorOf(-1))
+                && throwsOob(() -> factions.colorOf(1))
+                && factions.nameOf(0) != null
+                && factions.colorOf(0) != 0;
+        check("nameOf e colorOf recusam id inexistente, como memberCountOf", all,
+                "alguma chamada passou batido");
+    }
+
+    /** Soma das diferenças de canal entre duas cores RGBA8888. */
+    private static int channelDistance(int a, int b) {
+        int dr = Math.abs(((a >>> 24) & 0xFF) - ((b >>> 24) & 0xFF));
+        int dg = Math.abs(((a >>> 16) & 0xFF) - ((b >>> 16) & 0xFF));
+        int db = Math.abs(((a >>> 8) & 0xFF) - ((b >>> 8) & 0xFF));
+        return dr + dg + db;
     }
 
     // -------------------------------------------------------------- Territory
@@ -1138,7 +1250,7 @@ public final class SimSelfTest {
     /** Adulta, saciada, saudável e já procurando parceiro. */
     private static Creature readyToMate(Simulation sim, float x, float y, Species species) {
         Creature c = sim.creatures().spawn(x, y, 0f, 0f);
-        c.factionId = sim.factions().create();
+        c.factionId = sim.factions().create(new Rng(7L));
         c.species = species;
         c.age = sim.config().adultAgeSeconds + 1f;
         c.state = CreatureState.SEEKING_MATE;

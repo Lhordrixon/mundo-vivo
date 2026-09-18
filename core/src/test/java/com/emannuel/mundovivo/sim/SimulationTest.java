@@ -6,6 +6,7 @@ import com.emannuel.mundovivo.sim.creature.CreatureState;
 import com.emannuel.mundovivo.sim.creature.Species;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
+import com.emannuel.mundovivo.sim.util.Rng;
 import com.emannuel.mundovivo.render.TileMapping;
 import com.emannuel.mundovivo.sim.world.TileType;
 import com.emannuel.mundovivo.sim.world.World;
@@ -362,7 +363,7 @@ class SimulationTest {
     /** Adulta, saciada, saudável e já procurando parceiro: tudo que {@code canReproduce} exige. */
     private static Creature readyToMate(Simulation sim, float x, float y, Species species) {
         Creature c = sim.creatures().spawn(x, y, 0f, 0f);
-        c.factionId = sim.factions().create();
+        c.factionId = sim.factions().create(new Rng(7L));
         c.species = species;
         c.age = sim.config().adultAgeSeconds + 1f;
         c.state = CreatureState.SEEKING_MATE;

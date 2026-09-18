@@ -12,9 +12,17 @@ package com.emannuel.mundovivo.sim.creature;
  * diferentes, e duas execuções a 30 e a 60 quadros divergem criatura por
  * criatura desde os primeiros segundos. O que se mantém é o comportamento
  * agregado — medido em doze sementes a vinte minutos, a população média
- * ficou em 538, 445 e 403 a 30, 60 e 90 quadros, sem nenhuma extinção nas
+ * ficou em 532, 479 e 458 a 30, 60 e 90 quadros, sem nenhuma extinção nas
  * 36 execuções. A dispersão entre taxas existe porque passos grossos rendem
  * mordidas maiores por visita a um tile.
+ *
+ * <p>Eles valem para o estado de hoje e foram remedidos depois que as
+ * facções passaram a nascer com nome e cor. Fundar uma facção gasta um sorteio, 240
+ * deles no início do mundo, então a sequência inteira anda para frente e
+ * cada semente conta outra história — as médias eram 538, 445 e 403 antes
+ * disso. É variação de sorteio, não de comportamento: qualquer mudança que
+ * consuma o sorteador em outra ordem move estes valores, e por isso eles
+ * são referência de ordem de grandeza, não constantes a defender.
  *
  * <p><b>Estes números foram remedidos depois das espécies, e um deles teve
  * que mudar por causa delas.</b> Restringir o acasalamento a pares da mesma
@@ -43,14 +51,18 @@ public final class CreatureConfig {
      *
      * <p>Eram 120 até as espécies entrarem. Com o acasalamento restrito a
      * pares da mesma espécie, 120 fundadores viravam dois grupos de ~60 e a
-     * população desabava — medido, média 61 contra ~470 de antes, com
-     * sementes chegando a 2 sobreviventes. Dobrar os fundadores é o que
-     * devolve a densidade de cada espécie ao que era a densidade total.
+     * população desabava — medido, média 63 contra ~470 de antes, com
+     * sementes chegando a um punhado de sobreviventes. Dobrar os fundadores
+     * é o que devolve a densidade de cada espécie ao que era a densidade
+     * total: com 240, a média a 60 quadros volta para 479.
      *
      * <p>Não é um botão neutro: cada fundador funda a sua própria facção,
      * então dobrar este número dobra as facções iniciais — o que o
      * {@code FactionRegistry} e o {@code Territory} absorvem sem limite
-     * nenhum, mas que muda o retrato do mapa de territórios.
+     * nenhum, mas que muda o retrato do mapa de territórios. Desde que
+     * facção passou a nascer com nome e cor, dobrar este número também
+     * dobra os sorteios gastos na fundação, o que desloca a sequência do
+     * {@code Rng} para todo o resto da simulação.
      */
     public int initialPopulation = 240;
 

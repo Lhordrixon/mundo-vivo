@@ -585,7 +585,9 @@ public final class Simulation {
             // Ninguém nasce com pais no povoamento inicial: cada fundador
             // recebe uma facção só sua. É daqui que saem as primeiras
             // fronteiras de território, antes de qualquer descendência.
-            c.factionId = factions.create();
+            // O sorteador vai junto: nome e cor da facção saem da semente
+            // do mundo, como tudo mais.
+            c.factionId = factions.create(rng);
             // Espécie sorteada por fundador. Sem isso o mundo nasceria de uma
             // espécie só e a regra de acasalamento nunca seria exercida — e o
             // sorteio precisa ser aqui, porque daqui em diante ninguém mais
