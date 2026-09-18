@@ -83,6 +83,17 @@ public final class Creature {
      */
     public static final String CAUSE_PLAYER_STRIKE = "golpe do jogador";
 
+    /**
+     * Outra criatura, de facção diferente, estava perto o bastante.
+     *
+     * <p>Primeira causa de dano em que quem fere é alguém de dentro da
+     * simulação — fome e terreno são o mundo, o golpe é o jogador. Ainda
+     * não diz <em>quem</em> bateu: a causa é uma {@code String} livre
+     * justamente para caber "morto por Korgard" quando houver motivo, e
+     * hoje não há — nada lê a causa além da contagem de mortes.
+     */
+    public static final String CAUSE_COMBAT = "combate";
+
     Creature(int slot) {
         this.slot = slot;
     }

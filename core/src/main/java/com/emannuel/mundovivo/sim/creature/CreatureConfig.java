@@ -99,6 +99,36 @@ public final class CreatureConfig {
      */
     public float playerStrikeDamage = 0.34f;
 
+    /**
+     * Distância em que duas criaturas de facções diferentes já se ferem.
+     *
+     * <p>Corpo a corpo literal: um pouco maior que
+     * {@link #matingDistanceTiles} (1,2), porque brigar exige menos
+     * intimidade que reproduzir, e bem menor que qualquer raio de busca —
+     * ninguém procura briga, a briga acontece com quem esbarrou.
+     */
+    public float combatRangeTiles = 1.5f;
+
+    /**
+     * Vida perdida por segundo, <b>por inimigo ao alcance</b>.
+     *
+     * <p>Entre 0,12 da fome e 0,5 do terreno: uma briga de um contra um
+     * mata em pouco mais de cinco segundos, tempo de a criatura se afastar
+     * andando se o passeio a levar para longe. Não é instantâneo como o
+     * golpe do jogador porque não é um golpe — é o tempo que as duas
+     * passam perto.
+     *
+     * <p><b>Multiplicar pelo número de inimigos é a decisão de design
+     * deste número.</b> Com dano fixo, uma criatura sozinha troca de igual
+     * para igual com um reino inteiro e todos morrem no mesmo ritmo, o que
+     * tornaria facção e território decorativos. Multiplicando, estar em
+     * menor número mata mais rápido, que é a única coisa que faz um
+     * território valer alguma coisa. Isso não é exército como unidade
+     * coletiva (item 83): não há formação, ordem nem moral, só a conta de
+     * quantos estão ao alcance.
+     */
+    public float combatDamagePerSecond = 0.18f;
+
     /** Ganho de vida por segundo quando bem alimentada. */
     public float healthRegenPerSecond = 0.04f;
 
@@ -177,6 +207,8 @@ public final class CreatureConfig {
         c.starvationDamagePerSecond = starvationDamagePerSecond;
         c.hazardDamagePerSecond = hazardDamagePerSecond;
         c.playerStrikeDamage = playerStrikeDamage;
+        c.combatRangeTiles = combatRangeTiles;
+        c.combatDamagePerSecond = combatDamagePerSecond;
         c.healthRegenPerSecond = healthRegenPerSecond;
         c.eatingRate = eatingRate;
         c.hungerReliefPerFood = hungerReliefPerFood;
@@ -206,6 +238,10 @@ public final class CreatureConfig {
                 "hazardDamagePerSecond não pode ser negativa, senão terreno perigoso cura");
         require(playerStrikeDamage >= 0f,
                 "playerStrikeDamage não pode ser negativa, senão o golpe cura");
+        require(combatRangeTiles > 0f,
+                "combatRangeTiles deve ser > 0, senão ninguém nunca está ao alcance");
+        require(combatDamagePerSecond >= 0f,
+                "combatDamagePerSecond não pode ser negativa, senão inimigo por perto cura");
         require(hungerFullThreshold < hungerSeekThreshold,
                 "hungerFullThreshold precisa ser menor que hungerSeekThreshold, "
                         + "senão a criatura nunca para de comer nem nunca começa");

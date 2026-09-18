@@ -682,4 +682,210 @@ class SimulationTest {
             }
         }
     }
+
+    // ------------------------------------------------------ combate corpo a corpo
+
+    /**
+     * Uma criatura parada, adulta e saciada, na facção pedida.
+     *
+     * <p>Diferente de {@link #readyToMate}, não entra em {@code SEEKING_MATE}:
+     * estes testes são sobre proximidade e facção, e um par que sai andando
+     * atrás um do outro embaralharia a distância que o teste controla.
+     */
+    private static Creature fighter(Simulation sim, float x, float y, int factionId) {
+        // Espera de reprodução bem longa: adulta e saciada, esta criatura
+        // sairia procurando parceiro e o teste viraria um teste de
+        // reprodução. Com a espera, ela só fica ali — que é o que estes
+        // testes querem observar.
+        Creature c = sim.creatures().spawn(x, y, 0f, 9_999f);
+        c.factionId = factionId;
+        c.age = sim.config().adultAgeSeconds + 1f;
+        c.state = CreatureState.WANDERING;
+        return c;
+    }
+
+    /** Segura os dois no lugar por um passo: o que se mede é a briga, não o passeio. */
+    private static void holdStill(Creature c, float x, float y) {
+        c.x = x;
+        c.y = y;
+    }
+
+    @Test
+    @DisplayName("duas criaturas de facções diferentes, lado a lado, se ferem com o tempo")
+    void differentFactionsHurtEachOther() {
+        Simulation sim = emptyGrassWorld(1234L);
+        int reino = sim.factions().create(new Rng(1L));
+        int outro = sim.factions().create(new Rng(2L));
+        Creature a = fighter(sim, 5.5f, 5.5f, reino);
+        Creature b = fighter(sim, 6.0f, 5.5f, outro);
+
+        for (int i = 0; i < 30; i++) {
+            holdStill(a, 5.5f, 5.5f);
+            holdStill(b, 6.0f, 5.5f);
+            sim.step(STEP);
+        }
+
+        assertAll(
+                () -> assertTrue(a.health < 1f, "a não perdeu vida nenhuma: vida=" + a.health),
+                () -> assertTrue(b.health < 1f, "b não perdeu vida nenhuma: vida=" + b.health),
+                () -> assertEquals(Creature.CAUSE_COMBAT, a.lastDamageCause),
+                () -> assertEquals(Creature.CAUSE_COMBAT, b.lastDamageCause)
+        );
+    }
+
+    @Test
+    @DisplayName("duas criaturas da mesma facção, na mesma distância, não se tocam")
+    void sameFactionNeverFights() {
+        Simulation sim = emptyGrassWorld(1234L);
+        int reino = sim.factions().create(new Rng(1L));
+        Creature a = fighter(sim, 5.5f, 5.5f, reino);
+        Creature b = fighter(sim, 6.0f, 5.5f, reino);
+
+        for (int i = 0; i < 30; i++) {
+            holdStill(a, 5.5f, 5.5f);
+            holdStill(b, 6.0f, 5.5f);
+            sim.step(STEP);
+        }
+
+        assertAll(
+                () -> assertEquals(1f, a.health, 1e-6f, "a perdeu vida para um aliado"),
+                () -> assertEquals(1f, b.health, 1e-6f, "b perdeu vida para um aliado"),
+                () -> assertNull(a.lastDamageCause, "a levou dano de alguma coisa"),
+                () -> assertNull(b.lastDamageCause, "b levou dano de alguma coisa")
+        );
+    }
+
+    @Test
+    @DisplayName("criatura sem facção (-1) não fere nem é ferida")
+    void unassignedFactionIsNeverHostile() {
+        Simulation sim = emptyGrassWorld(1234L);
+        int reino = sim.factions().create(new Rng(1L));
+        Creature semFaccao = fighter(sim, 5.5f, 5.5f, -1);
+        Creature comFaccao = fighter(sim, 6.0f, 5.5f, reino);
+
+        for (int i = 0; i < 30; i++) {
+            holdStill(semFaccao, 5.5f, 5.5f);
+            holdStill(comFaccao, 6.0f, 5.5f);
+            sim.step(STEP);
+        }
+
+        assertAll(
+                () -> assertEquals(1f, semFaccao.health, 1e-6f,
+                        "quem não tem facção foi ferido"),
+                () -> assertEquals(1f, comFaccao.health, 1e-6f,
+                        "quem tem facção foi ferido por quem não tem"),
+                () -> assertNull(semFaccao.lastDamageCause),
+                () -> assertNull(comFaccao.lastDamageCause)
+        );
+    }
+
+    @Test
+    @DisplayName("longe demais, facções diferentes se ignoram")
+    void combatNeedsProximity() {
+        Simulation sim = emptyGrassWorld(1234L);
+        int reino = sim.factions().create(new Rng(1L));
+        int outro = sim.factions().create(new Rng(2L));
+        float longe = sim.config().combatRangeTiles + 2f;
+        Creature a = fighter(sim, 3.5f, 3.5f, reino);
+        Creature b = fighter(sim, 3.5f + longe, 3.5f, outro);
+
+        // Parados: wander mexeria os dois e a distância deixaria de ser a
+        // do teste. É o alcance que está sendo provado, não o passeio.
+        for (int i = 0; i < 30; i++) {
+            holdStill(a, 3.5f, 3.5f);
+            holdStill(b, 3.5f + longe, 3.5f);
+            sim.step(STEP);
+        }
+
+        assertAll(
+                () -> assertEquals(1f, a.health, 1e-6f, "feriu alguém fora do alcance"),
+                () -> assertEquals(1f, b.health, 1e-6f, "foi ferido de fora do alcance")
+        );
+    }
+
+    @Test
+    @DisplayName("estar em menor número mata mais rápido")
+    void beingOutnumberedHurtsMore() {
+        Simulation sim = emptyGrassWorld(1234L);
+        int sozinho = sim.factions().create(new Rng(1L));
+        int bando = sim.factions().create(new Rng(2L));
+        Creature um = fighter(sim, 5.5f, 5.5f, sozinho);
+        Creature doisContra = fighter(sim, 5.9f, 5.5f, bando);
+        Creature terceiro = fighter(sim, 5.5f, 5.9f, bando);
+
+        for (int i = 0; i < 20; i++) {
+            holdStill(um, 5.5f, 5.5f);
+            holdStill(doisContra, 5.9f, 5.5f);
+            holdStill(terceiro, 5.5f, 5.9f);
+            sim.step(STEP);
+        }
+
+        assertTrue(um.health < doisContra.health,
+                "o sozinho (vida=" + um.health + ") deveria estar pior que quem tem companhia"
+                        + " (vida=" + doisContra.health + ")");
+    }
+
+    @Test
+    @DisplayName("morte em combate sai pelo mesmo caminho de morte da fome e do golpe")
+    void combatDeathUsesTheSharedDeathPath() {
+        Simulation sim = emptyGrassWorld(1234L);
+        int reino = sim.factions().create(new Rng(1L));
+        int outro = sim.factions().create(new Rng(2L));
+        Creature a = fighter(sim, 5.5f, 5.5f, reino);
+        Creature b = fighter(sim, 5.6f, 5.5f, outro);
+
+        int tile = sim.world().index(a.tileX(), a.tileY());
+        // Mesma receita do teste do golpe: sem rebrota e com o tile vazio,
+        // comida que apareça ali só pode ter vindo de um cadáver.
+        sim.foodMap().regrowthPerSecond(0f);
+        sim.foodMap().consume(tile, 999f);
+
+        int reinoAntes = sim.factions().memberCountOf(reino);
+        int outroAntes = sim.factions().memberCountOf(outro);
+        int livresAntes = sim.creatures().freeCount();
+
+        // Para na primeira morte. Depois dela o sobrevivente fica sem
+        // inimigo e acaba morrendo de fome, o que embaralharia a
+        // contabilidade que este teste existe para conferir.
+        int passos = 0;
+        while (sim.population() == 2 && passos < 2000) {
+            // Presas uma à outra: sem isso o passeio as separa.
+            holdStill(a, 5.5f, 5.5f);
+            holdStill(b, 5.6f, 5.5f);
+            sim.step(STEP);
+            passos++;
+        }
+
+        // Qual das duas cai primeiro é detalhe da ordem do laço, não regra:
+        // o teste pergunta o que acontece com quem morreu, seja quem for.
+        boolean aMorreu = !sim.creatures().isAlive(a.slot());
+        Creature morto = aMorreu ? a : b;
+        int faccaoDoMorto = aMorreu ? reino : outro;
+        int faccaoDoVivo = aMorreu ? outro : reino;
+        int membrosAntesDoMorto = aMorreu ? reinoAntes : outroAntes;
+        int membrosAntesDoVivo = aMorreu ? outroAntes : reinoAntes;
+
+        assertAll(
+                () -> assertEquals(1, sim.population(), "ninguém morreu em 2000 passos"),
+                () -> assertEquals(1L, sim.deathsByCombat(), "morte não creditada ao combate"),
+                () -> assertEquals(0L, sim.deathsByStarvation(), "morte creditada à fome"),
+                () -> assertEquals(0L, sim.deathsByOldAge(), "morte creditada à velhice"),
+                () -> assertEquals(0L, sim.deathsByExternalDamage(),
+                        "combate não deveria contar como dano externo"),
+                () -> assertTrue(sim.foodMap().amountAt(tile) > 0f,
+                        "a morte em combate não depositou cadáver no tile"),
+                () -> assertEquals(membrosAntesDoMorto - 1,
+                        sim.factions().memberCountOf(faccaoDoMorto),
+                        "o morto não saiu da facção"),
+                () -> assertEquals(membrosAntesDoVivo,
+                        sim.factions().memberCountOf(faccaoDoVivo),
+                        "a facção de quem sobreviveu perdeu um membro"),
+                () -> assertEquals(livresAntes + 1, sim.creatures().freeCount(),
+                        "o slot não voltou para o pool"),
+                () -> assertEquals(Creature.CAUSE_COMBAT, morto.lastDamageCause,
+                        "a causa registrada não foi combate"),
+                () -> assertEquals(0f, morto.health, 1e-6f,
+                        "quem morreu não estava com vida zerada")
+        );
+    }
 }

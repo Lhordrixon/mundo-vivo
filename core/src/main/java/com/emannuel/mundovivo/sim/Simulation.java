@@ -68,6 +68,7 @@ public final class Simulation {
     private long deathsByStarvation;
     private long deathsByOldAge;
     private long deathsByExternalDamage;
+    private long deathsByCombat;
 
     public Simulation(World world, CreatureConfig config) {
         config.validate();
@@ -141,6 +142,18 @@ public final class Simulation {
         return deathsByExternalDamage;
     }
 
+    /**
+     * Mortes em combate corpo a corpo.
+     *
+     * <p>Contada à parte de {@link #deathsByExternalDamage} de propósito:
+     * aquela conta o que o mundo e o jogador fazem à criatura, esta conta o
+     * que as criaturas fazem umas às outras. Somá-las apagaria justamente a
+     * distinção que a causa do dano existe para preservar.
+     */
+    public long deathsByCombat() {
+        return deathsByCombat;
+    }
+
     // ------------------------------------------------------------------ passo
 
     /**
@@ -195,6 +208,20 @@ public final class Simulation {
         // alguém, que é para onde os poderes de deus e os desastres vão.
         if (tileUnder(c).hazardous()) {
             c.applyDamage(config.hazardDamagePerSecond * dt, Creature.CAUSE_HAZARDOUS_TERRAIN);
+        }
+
+        // Combate corpo a corpo. Depois do terreno pela mesma razão que o
+        // terreno vem depois da fome: quem morre com as duas coisas
+        // acontecendo é creditado à mais recente.
+        //
+        // Cada criatura toma o dano no próprio passo, em vez de bater na
+        // outra. Os dois jeitos dão a mesma troca simétrica, mas este não
+        // mexe na vida de ninguém que o laço ainda vai visitar — a morte
+        // continua sendo resolvida logo abaixo, para a criatura da vez,
+        // pelo caminho que já existia.
+        int hostiles = hostileNeighbours(c);
+        if (hostiles > 0) {
+            c.applyDamage(hostiles * config.combatDamagePerSecond * dt, Creature.CAUSE_COMBAT);
         }
 
         if (resolveDeathFromDamage(c)) {
@@ -373,8 +400,8 @@ public final class Simulation {
      * último dano.
      *
      * <p>O único lugar do jogo que transforma vida zerada em morte. Fome,
-     * terreno e golpe do jogador passam todos por aqui: a estatística é que
-     * se separa, não o caminho.
+     * terreno, golpe do jogador e combate passam todos por aqui: a
+     * estatística é que se separa, não o caminho.
      *
      * @return {@code true} se a criatura morreu nesta chamada
      */
@@ -384,6 +411,8 @@ public final class Simulation {
         }
         if (Creature.CAUSE_STARVATION.equals(c.lastDamageCause)) {
             deathsByStarvation++;
+        } else if (Creature.CAUSE_COMBAT.equals(c.lastDamageCause)) {
+            deathsByCombat++;
         } else {
             deathsByExternalDamage++;
         }
@@ -395,6 +424,49 @@ public final class Simulation {
         foodMap.deposit(currentTile(c), config.corpseFoodValue);
         factions.leave(c.factionId);
         pool.despawn(c);
+    }
+
+    /**
+     * Quantas criaturas vivas de outra facção estão ao alcance de combate.
+     *
+     * <p>Facção -1 não briga com ninguém, dos dois lados: é o valor de um
+     * slot que ainda não recebeu facção, não uma facção que difere de
+     * todas. Tratá-lo como inimigo faria uma criatura recém-nascida ser
+     * hostil ao mundo inteiro por um instante.
+     *
+     * <p>Compara distância ao quadrado para não tirar raiz: diferente de
+     * {@link #resolveMate}, que só roda para quem está procurando
+     * parceiro, esta varredura roda para <b>toda</b> criatura em
+     * <b>todo</b> passo, e é a parte mais cara da simulação hoje. A
+     * correção, quando doer, é a mesma já anotada como dívida técnica para
+     * a busca por parceiro: indexar as criaturas em uma grade espacial.
+     */
+    private int hostileNeighbours(Creature c) {
+        if (c.factionId < 0) {
+            return 0;
+        }
+        float range = config.combatRangeTiles;
+        float rangeSquared = range * range;
+        int hostiles = 0;
+
+        for (int i = 0, n = pool.activeCount(); i < n; i++) {
+            Creature other = pool.activeAt(i);
+            if (other == c || other.factionId < 0 || other.factionId == c.factionId) {
+                continue;
+            }
+            float dx = other.x - c.x;
+            if (dx > range || dx < -range) {
+                continue;
+            }
+            float dy = other.y - c.y;
+            if (dy > range || dy < -range) {
+                continue;
+            }
+            if (dx * dx + dy * dy <= rangeSquared) {
+                hostiles++;
+            }
+        }
+        return hostiles;
     }
 
     /**
