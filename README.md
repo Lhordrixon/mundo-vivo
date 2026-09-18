@@ -30,6 +30,7 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 8. Passo de otimização e medição de FPS | não começou |
 | 9. Dano externo e terreno perigoso | pronto e testado |
 | 10. Primeiro poder do jogador: toque que fere | pronto e testado |
+| 11. Espécie herdável, com acasalamento restrito | pronto e testado |
 
 O que roda hoje: o app abre, gera um mundo de 256x192 tiles, espalha 120
 criaturas pela terra firme e as deixa viver. Elas procuram comida, comem,
@@ -207,13 +208,74 @@ oscila em vez de despencar.
 população multiplica antes de a comida responder, estoura o mapa e morre de
 fome inteira. O ciclo de explosão e colapso sumiu ao dobrar a espera.
 
-Uma observação que vale registrar porque contraria a intuição: no equilíbrio
-atual as criaturas quase não morrem de fome. Em dez minutos simulados foram
-527 mortes de velhice contra 28 de inanição. A comida limita a população
-pela **natalidade**, não pela mortalidade — quem está com fome acima do
-limiar simplesmente não reproduz. É um regime mais estável que o da fome
-matando em massa, e é bom saber disso antes de mexer nos números: baixar a
-rebrota não vai matar mais criaturas, vai fazer nascerem menos.
+Uma observação que vale registrar porque contraria a intuição: as criaturas
+quase não morrem de fome. A comida limita a população pela **natalidade**,
+não pela mortalidade — quem está com fome acima do limiar simplesmente não
+reproduz. É um regime mais estável que o da fome matando em massa, e é bom
+saber disso antes de mexer nos números: baixar a rebrota não vai matar mais
+criaturas, vai fazer nascerem menos.
+
+**Isso valia até a espécie entrar, e mudou.** Hoje a comida não é mais o que
+limita: sobra comida no mapa e a população fica pequena assim mesmo, porque
+o gargalo virou encontrar parceiro da mesma espécie. Os números estão na
+seção sobre espécies, logo abaixo, e são a coisa mais importante a saber
+antes de mexer em qualquer parâmetro de população.
+
+### Como as espécies se separam
+
+Toda criatura pertence a uma espécie. A população inicial sorteia a sua; daí
+em diante ninguém mais escolhe — todo nascimento herda a dos pais. E os dois
+pais têm sempre a mesma, porque a busca por parceiro passou a exigir espécie
+igual: duas criaturas de espécies diferentes nunca formam par, por mais
+próximas e disponíveis que estejam. É por isso que o filho herda sem sorteio,
+diferente da facção, onde o sorteio existe justamente porque os pais podem
+divergir.
+
+São duas espécies, com nomes deliberadamente sem graça (`ALPHA` e `BETA`).
+Elas não têm atributo, dieta, velocidade nem hostilidade própria, e não
+aparecem na tela. A única coisa que uma espécie faz hoje é decidir quem pode
+ter filho com quem. Nome evocativo prometeria predação e cultura que o código
+não tem — e este projeto já pagou caro por promessa não cumprida.
+
+**O efeito colateral é grande e precisa ser lido antes de qualquer
+rebalanceamento.** Separar a reprodução em duas espécies reduziu a população
+de equilíbrio em cerca de sete vezes. Medido isolando a causa — mesma
+semente, mesmo sorteador, mesmo código, mudando só se o filtro barra alguém:
+
+| | população média a 20 min | pior semente |
+|---|---|---|
+| Uma espécie (filtro inerte) | 470 | 63 |
+| Duas espécies | 63 | 2 |
+
+O mecanismo não é o raio de busca: alargá-lo de 70 para 105, 140 ou 175 tiles
+não recupera nada (médias de 70, 55 e 49, e extinções aparecendo nos raios
+maiores). O gargalo é outro — a qualquer instante só um punhado de criaturas
+está em `SEEKING_MATE` ao mesmo tempo, e exigir espécie igual corta esse
+punhado ao meio. Elas não estão longe demais; estão procurando em momentos
+diferentes.
+
+A consequência é uma **troca de regime**: o mundo deixou de ser limitado por
+comida e passou a ser limitado por parceiro. Com duas espécies sobra comida
+no mapa (9318 de 9381 ao fim de 40 minutos, contra 7919 com uma espécie) e
+ainda assim morre mais gente de velhice do que nasce. O README dizia que
+baixar a rebrota faria nascerem menos criaturas em vez de matá-las; isso
+continua verdade, mas hoje a rebrota não é mais o que decide o tamanho da
+população.
+
+Duas alavancas foram medidas, caso valha rebalancear (nenhuma foi aplicada —
+é decisão de jogo, não de implementação):
+
+| Ajuste | população média a 20 min, 6 sementes |
+|---|---|
+| Como está | 58 |
+| `initialPopulation` 120 → 240 | 441 |
+| `reproductionCooldownSeconds` 55 → 27 | 927 |
+| Os dois juntos | 941 |
+
+Dobrar a população inicial devolve praticamente o regime antigo (441 contra
+os 470 de uma espécie só) e tira as sementes da beira da extinção — mas não é
+um botão neutro: cada fundador funda uma facção, então dobrar fundadores
+dobra o número de facções, e isso mexe no sistema de território junto.
 
 ### Como a vida é tirada
 
@@ -388,7 +450,7 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 
 - Todo o código, incluindo `render/` e os dois launchers, compila com
   `-Xlint:all` sem um único aviso.
-- As 69 verificações de `SimSelfTest` passam. Mundo: determinismo por
+- As 74 verificações de `SimSelfTest` passam. Mundo: determinismo por
   semente, sementes diferentes divergindo, todo tile com tipo válido,
   elevação sempre em [0,1], proporção terra/mar jogável em 6 sementes,
   presença de oceano profundo e de montanha, geração em 18 ms. Comida:
@@ -415,15 +477,23 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   mundo gerado normal sem nenhuma morte por dano de terreno.
 - A saída visual do mundo foi conferida: mapas em várias sementes, com
   continentes, cordilheiras com neve no cume, litoral e calota polar.
-- Comportamento da população: 12 sementes rodadas por 30 minutos
-  simulados, **nenhuma extinção e nenhuma batida no teto do pool**,
-  populações finais entre 334 e 1082.
-- Estabilidade por taxa de quadros: 10 sementes a 20 minutos, população
-  média de 494, 432 e 463 a 30, 60 e 90 quadros por segundo — dentro da
-  variação entre sementes. A 20 quadros há desvio para cima (706), porque
-  com passos grossos cada visita a um tile rende uma mordida maior.
-- Custo de um passo: 0,04 ms com ~200 criaturas e 0,086 ms com 2100, em um
-  quadro que tem 16,6 ms. A simulação não é o gargalo.
+- Comportamento da população, **medido de novo depois das espécies**: 12
+  sementes a 20 minutos, populações finais entre 2 e 158, média 61, nenhuma
+  batida no teto do pool. Os números antigos desta linha (entre 334 e 1082,
+  nenhuma extinção) eram de antes da espécie existir e não valem mais — ver
+  a seção sobre espécies para o porquê e para o tamanho do efeito.
+- Estabilidade por taxa de quadros, **remedida depois das espécies**: 8
+  sementes a 20 minutos, população média de 173, 89, 63 e 73 a 20, 30, 60 e
+  90 quadros por segundo. A dispersão entre taxas piorou muito: antes das
+  espécies as médias ficavam todas perto de 460 e nenhuma semente extinguia;
+  agora duas extinguem em alguma taxa (a semente 99 a 30 e a 90 quadros, a
+  4242 a 90). O jogo continua sendo o mesmo a 30 e a 60 quadros no que é
+  determinístico, mas a população deixou de ser robusta o bastante para a
+  diferença entre taxas não importar.
+- Custo de um passo: 0,037 ms com 67 criaturas e 0,086 ms com 2100, em um
+  quadro que tem 16,6 ms. A simulação não é o gargalo. (A medição de ~200
+  criaturas saiu da lista porque a semente que a produzia não chega mais
+  a essa população — o custo por criatura não mudou.)
 - Custo de um recálculo de território: 0,33 ms com pouco mais de 200
   criaturas em um mundo padrão (49 mil tiles) — bem abaixo do segundo
   inteiro de folga que o intervalo de recálculo dá.
@@ -497,6 +567,13 @@ Registrada de propósito, para não virar surpresa:
   quase nunca acontece — vizinhos tendem a ser parentes —, mas quando a
   guerra ou fronteiras fechadas entrarem, pode valer a pena decidir se um
   casal assim deveria sequer poder reproduzir.
+- **A população ficou frágil depois das espécies.** Medido: média 61 em
+  12 sementes a 20 minutos, contra ~470 antes, e duas sementes extinguem
+  em alguma taxa de quadros (99 a 30 e 90, 4242 a 90). O mundo saiu do
+  regime limitado por comida, que era o desejado, e entrou em um regime
+  limitado por encontro de parceiro. Os números e as alavancas medidas
+  estão na seção sobre espécies; nenhuma foi aplicada, porque escolher o
+  tamanho da população é decisão de jogo.
 - **Dano de terreno não tem gatilho em jogo.** Nada hoje transforma o
   chão debaixo de uma criatura, então a via existe testada mas ociosa: ela
   é a base para o sistema 6 (poderes de deus) e o 7 (guerra), não uma

@@ -2,6 +2,8 @@ package com.emannuel.mundovivo.sim;
 
 import com.emannuel.mundovivo.sim.creature.Creature;
 import com.emannuel.mundovivo.sim.creature.CreatureConfig;
+import com.emannuel.mundovivo.sim.creature.CreatureState;
+import com.emannuel.mundovivo.sim.creature.Species;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
 import com.emannuel.mundovivo.render.TileMapping;
@@ -19,6 +21,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -183,7 +186,11 @@ class SimulationTest {
         run(sim, 10f * 60f);
 
         int population = sim.population();
-        assertTrue(population > 200, "população pequena demais para o teste valer: " + population);
+        // O limiar existe para o teste valer a pena — medir o custo de um
+        // passo com um punhado de criaturas não mede nada. Era 200 antes das
+        // espécies; com o acasalamento restrito a mesma semente estabiliza
+        // em dezenas, não em centenas (ver a nota de regime no README).
+        assertTrue(population > 40, "população pequena demais para o teste valer: " + population);
 
         long startedAt = System.nanoTime();
         for (int i = 0; i < 600; i++) {
@@ -321,6 +328,161 @@ class SimulationTest {
 
         assertEquals(0L, sim.deathsByExternalDamage(),
                 "criatura sofreu dano de terreno em um mundo gerado normalmente");
+    }
+
+    // ------------------------------------------------------------- espécies
+
+    /**
+     * Campo aberto, sem povoamento nenhum: o teste coloca quem quiser, onde
+     * quiser, no estado que quiser.
+     *
+     * <p>Povoamento zero de propósito. A reprodução em mundo gerado depende
+     * de sorteio, posição e fome, e um teste que dependa disso prova pouco:
+     * "não nasceu ninguém" pode ser espécie diferente, pode ser que os dois
+     * nunca se encontraram. Aqui as duas criaturas nascem adultas, saciadas
+     * e a meio tile uma da outra — se não nasce filho, é pela regra.
+     */
+    private static Simulation emptyGrassWorld(long seed) {
+        World world = new World(16, 16, seed);
+        for (int y = 0; y < world.height(); y++) {
+            for (int x = 0; x < world.width(); x++) {
+                world.setTile(x, y, TileType.GRASSLAND);
+            }
+        }
+
+        CreatureConfig config = new CreatureConfig();
+        config.initialPopulation = 0;
+        config.maxCreatures = 8;
+
+        Simulation sim = new Simulation(world, config);
+        assertEquals(0, sim.population(), "o mundo do teste deveria nascer vazio");
+        return sim;
+    }
+
+    /** Adulta, saciada, saudável e já procurando parceiro: tudo que {@code canReproduce} exige. */
+    private static Creature readyToMate(Simulation sim, float x, float y, Species species) {
+        Creature c = sim.creatures().spawn(x, y, 0f, 0f);
+        c.factionId = sim.factions().create();
+        c.species = species;
+        c.age = sim.config().adultAgeSeconds + 1f;
+        c.state = CreatureState.SEEKING_MATE;
+        return c;
+    }
+
+    @Test
+    @DisplayName("duas criaturas de espécies diferentes, grudadas e prontas, não têm filho")
+    void differentSpeciesNeverBreed() {
+        Simulation sim = emptyGrassWorld(1234L);
+        Creature a = readyToMate(sim, 5.5f, 5.5f, Species.ALPHA);
+        Creature b = readyToMate(sim, 6.0f, 5.5f, Species.BETA);
+
+        sim.step(STEP);
+
+        assertAll(
+                () -> assertEquals(0L, sim.births(), "nasceu filho de espécies diferentes"),
+                () -> assertEquals(2, sim.population()),
+                // Sem isto o teste passaria por engano se elas tivessem se
+                // afastado: o que precisa ser provado é que a regra barrou,
+                // não que a distância barrou.
+                () -> assertTrue(a.distanceTo(b) <= sim.config().matingDistanceTiles,
+                        "se afastaram durante o passo; o teste deixou de medir a espécie")
+        );
+    }
+
+    @Test
+    @DisplayName("as mesmas duas criaturas, mesma espécie, têm filho no mesmo passo")
+    void sameSpeciesStillBreed() {
+        Simulation sim = emptyGrassWorld(1234L);
+        readyToMate(sim, 5.5f, 5.5f, Species.ALPHA);
+        readyToMate(sim, 6.0f, 5.5f, Species.ALPHA);
+
+        sim.step(STEP);
+
+        assertAll(
+                () -> assertEquals(1L, sim.births(), "mesma espécie deixou de reproduzir"),
+                () -> assertEquals(3, sim.population())
+        );
+    }
+
+    @Test
+    @DisplayName("o filho herda a espécie dos pais")
+    void childInheritsSpecies() {
+        Simulation sim = emptyGrassWorld(99L);
+        readyToMate(sim, 5.5f, 5.5f, Species.BETA);
+        readyToMate(sim, 6.0f, 5.5f, Species.BETA);
+
+        sim.step(STEP);
+        assertEquals(1L, sim.births());
+
+        int betas = 0;
+        for (int i = 0; i < sim.population(); i++) {
+            if (sim.creatures().activeAt(i).species == Species.BETA) {
+                betas++;
+            }
+        }
+        assertEquals(3, betas, "o filho nasceu de outra espécie que não a dos pais");
+    }
+
+    @Test
+    @DisplayName("o povoamento inicial nasce com mais de uma espécie")
+    void foundersAreNotAllOneSpecies() {
+        Simulation sim = simulation(2222L);
+
+        Set<Species> seen = new HashSet<>();
+        for (int i = 0; i < sim.population(); i++) {
+            seen.add(sim.creatures().activeAt(i).species);
+        }
+
+        assertEquals(Species.VALUES.length, seen.size(),
+                "o sorteio de espécie não cobriu o enum: " + seen);
+    }
+
+    @Test
+    @DisplayName("nenhuma criatura viva fica sem espécie, nem depois de reciclar slots")
+    void everyLivingCreatureHasASpecies() {
+        // Pool pequeno força reciclagem de slot, que é onde uma espécie
+        // esquecida no reset apareceria.
+        CreatureConfig config = new CreatureConfig();
+        config.maxCreatures = 300;
+        Simulation sim = new Simulation(
+                WorldGenerator.generate(WorldConfig.medium(99L)), config);
+
+        // Trinta minutos, a mesma duração de reusesPoolSlots: é o tempo que
+        // este pool de 300 leva para precisar repetir um slot, e slot
+        // repetido é onde uma espécie esquecida no reset apareceria.
+        for (int step = 0; step < 108_000; step++) {
+            sim.step(STEP);
+
+            if (step % 5_000 != 0) {
+                continue;
+            }
+            for (int i = 0; i < sim.population(); i++) {
+                assertNotNull(sim.creatures().activeAt(i).species,
+                        "criatura viva sem espécie");
+            }
+        }
+        assertTrue(sim.creatures().totalSpawns() > sim.creatures().capacity(),
+                "reciclagem de slot não foi exercitada");
+    }
+
+    @ParameterizedTest(name = "a semente {0} sobrevive à restrição por espécie, ainda que menor")
+    @ValueSource(longs = {12345L, 2026L, 777L})
+    void speciesRestrictionLeavesAViablePopulation(long seed) {
+        // Sanidade, não igualdade, e o nome importa: medido, restringir o
+        // acasalamento por espécie **reduz muito** a população — média de 58
+        // contra 470 com uma espécie só, mesma semente e mesmo sorteador.
+        // O que este teste garante é só o piso: ninguém extingue e ninguém
+        // trava o pool. Chamá-lo de "não estrangula a reprodução" seria
+        // mentira; estrangula, e está registrado no README.
+        Simulation sim = simulation(seed);
+        run(sim, 20f * 60f);
+
+        assertAll(
+                () -> assertTrue(sim.population() > 0, "população extinta na semente " + seed),
+                () -> assertTrue(sim.population() < sim.config().maxCreatures,
+                        "população bateu no teto do pool"),
+                () -> assertTrue(sim.births() > 0, "ninguém reproduziu em 20 minutos")
+        );
     }
 
     // ------------------------------------------------------ golpe do jogador

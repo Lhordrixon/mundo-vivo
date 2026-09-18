@@ -4,6 +4,7 @@ import com.emannuel.mundovivo.sim.creature.Creature;
 import com.emannuel.mundovivo.sim.creature.CreatureConfig;
 import com.emannuel.mundovivo.sim.creature.CreaturePool;
 import com.emannuel.mundovivo.sim.creature.CreatureState;
+import com.emannuel.mundovivo.sim.creature.Species;
 import com.emannuel.mundovivo.sim.ecology.FoodMap;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
@@ -317,6 +318,11 @@ public final class Simulation {
             int childFaction = rng.chance(0.5f) ? a.factionId : b.factionId;
             child.factionId = childFaction;
             factions.join(childFaction);
+            // Espécie não sorteia: os dois pais têm sempre a mesma, porque
+            // resolveMate não deixa espécies diferentes formarem par. Herdar
+            // de "um dos dois" e herdar de a são a mesma coisa aqui — e
+            // escrever um sorteio sugeriria que podem divergir.
+            child.species = a.species;
         }
     }
 
@@ -407,6 +413,7 @@ public final class Simulation {
         if (c.targetMateSlot >= 0 && pool.isAlive(c.targetMateSlot)) {
             Creature previous = pool.bySlot(c.targetMateSlot);
             if (previous != c
+                    && previous.species == c.species
                     && previous.state == CreatureState.SEEKING_MATE
                     && c.distanceTo(previous) <= config.mateSearchRadiusTiles) {
                 return previous;
@@ -418,7 +425,9 @@ public final class Simulation {
 
         for (int i = 0, n = pool.activeCount(); i < n; i++) {
             Creature other = pool.activeAt(i);
-            if (other == c || other.state != CreatureState.SEEKING_MATE) {
+            if (other == c
+                    || other.species != c.species
+                    || other.state != CreatureState.SEEKING_MATE) {
                 continue;
             }
             float distance = c.distanceTo(other);
@@ -577,6 +586,11 @@ public final class Simulation {
             // recebe uma facção só sua. É daqui que saem as primeiras
             // fronteiras de território, antes de qualquer descendência.
             c.factionId = factions.create();
+            // Espécie sorteada por fundador. Sem isso o mundo nasceria de uma
+            // espécie só e a regra de acasalamento nunca seria exercida — e o
+            // sorteio precisa ser aqui, porque daqui em diante ninguém mais
+            // escolhe espécie: todo nascimento herda.
+            c.species = Species.VALUES[rng.nextInt(Species.VALUES.length)];
             spawned++;
         }
     }

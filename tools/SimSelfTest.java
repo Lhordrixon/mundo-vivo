@@ -2,6 +2,8 @@ import com.emannuel.mundovivo.sim.Simulation;
 import com.emannuel.mundovivo.sim.creature.Creature;
 import com.emannuel.mundovivo.sim.creature.CreatureConfig;
 import com.emannuel.mundovivo.sim.creature.CreaturePool;
+import com.emannuel.mundovivo.sim.creature.CreatureState;
+import com.emannuel.mundovivo.sim.creature.Species;
 import com.emannuel.mundovivo.sim.ecology.FoodMap;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
@@ -86,6 +88,13 @@ public final class SimSelfTest {
         corridorSplitsAtTheMidpoint();
         waterIsNeverClaimed();
         territoryRoutesAroundWaterAndBreaksTiesByPoolOrder();
+
+        System.out.println("\n-- Especies --");
+        differentSpeciesNeverBreed();
+        sameSpeciesStillBreed();
+        childInheritsSpecies();
+        foundersAreNotAllOneSpecies();
+        everyLivingCreatureHasASpecies();
 
         System.out.println("\n-- Dano externo --");
         damageReducesHealthAndRecordsCause();
@@ -1108,6 +1117,107 @@ public final class SimSelfTest {
         check("golpe fora do mundo é ignorado sem exceção",
                 allNull && sim.population() == 1 && c.health == 1f,
                 "pop=" + sim.population() + " vida=" + c.health);
+    }
+
+    // -------------------------------------------------------------- espécies
+
+    /** Campo aberto e vazio: o teste coloca quem quiser, onde quiser. */
+    private static Simulation emptyGrassWorld(long seed) {
+        World world = new World(16, 16, seed);
+        for (int y = 0; y < world.height(); y++) {
+            for (int x = 0; x < world.width(); x++) {
+                world.setTile(x, y, TileType.GRASSLAND);
+            }
+        }
+        CreatureConfig config = new CreatureConfig();
+        config.initialPopulation = 0;
+        config.maxCreatures = 8;
+        return new Simulation(world, config);
+    }
+
+    /** Adulta, saciada, saudável e já procurando parceiro. */
+    private static Creature readyToMate(Simulation sim, float x, float y, Species species) {
+        Creature c = sim.creatures().spawn(x, y, 0f, 0f);
+        c.factionId = sim.factions().create();
+        c.species = species;
+        c.age = sim.config().adultAgeSeconds + 1f;
+        c.state = CreatureState.SEEKING_MATE;
+        return c;
+    }
+
+    private static void differentSpeciesNeverBreed() {
+        Simulation sim = emptyGrassWorld(1234L);
+        Creature a = readyToMate(sim, 5.5f, 5.5f, Species.ALPHA);
+        Creature b = readyToMate(sim, 6.0f, 5.5f, Species.BETA);
+        sim.step(STEP);
+
+        // A distância entra na checagem para o teste não passar por engano
+        // caso as duas tenham se afastado em vez de terem sido barradas.
+        check("duas criaturas de espécies diferentes, grudadas e prontas, não têm filho",
+                sim.births() == 0L && sim.population() == 2
+                        && a.distanceTo(b) <= sim.config().matingDistanceTiles,
+                "nascimentos=" + sim.births() + " distancia=" + a.distanceTo(b));
+    }
+
+    private static void sameSpeciesStillBreed() {
+        Simulation sim = emptyGrassWorld(1234L);
+        readyToMate(sim, 5.5f, 5.5f, Species.ALPHA);
+        readyToMate(sim, 6.0f, 5.5f, Species.ALPHA);
+        sim.step(STEP);
+
+        check("as mesmas duas criaturas, mesma espécie, têm filho no mesmo passo",
+                sim.births() == 1L && sim.population() == 3,
+                "nascimentos=" + sim.births() + " pop=" + sim.population());
+    }
+
+    private static void childInheritsSpecies() {
+        Simulation sim = emptyGrassWorld(99L);
+        readyToMate(sim, 5.5f, 5.5f, Species.BETA);
+        readyToMate(sim, 6.0f, 5.5f, Species.BETA);
+        sim.step(STEP);
+
+        int betas = 0;
+        for (int i = 0; i < sim.population(); i++) {
+            if (sim.creatures().activeAt(i).species == Species.BETA) {
+                betas++;
+            }
+        }
+        check("o filho herda a espécie dos pais",
+                sim.births() == 1L && betas == 3,
+                "nascimentos=" + sim.births() + " da especie dos pais=" + betas);
+    }
+
+    private static void foundersAreNotAllOneSpecies() {
+        Simulation sim = simulation(2222L);
+        Set<Species> seen = new HashSet<>();
+        for (int i = 0; i < sim.population(); i++) {
+            seen.add(sim.creatures().activeAt(i).species);
+        }
+        check("o povoamento inicial nasce com mais de uma espécie",
+                seen.size() == Species.VALUES.length, "especies sorteadas: " + seen);
+    }
+
+    private static void everyLivingCreatureHasASpecies() {
+        CreatureConfig config = new CreatureConfig();
+        config.maxCreatures = 300;
+        Simulation sim = new Simulation(
+                WorldGenerator.generate(WorldConfig.medium(99L)), config);
+        String problem = null;
+
+        for (int step = 0; step < 108_000 && problem == null; step++) {
+            sim.step(STEP);
+            if (step % 5_000 != 0) {
+                continue;
+            }
+            for (int i = 0; i < sim.population(); i++) {
+                if (sim.creatures().activeAt(i).species == null) {
+                    problem = "criatura viva sem espécie no passo " + step;
+                    break;
+                }
+            }
+        }
+        check("nenhuma criatura viva fica sem espécie, nem depois de reciclar slots",
+                problem == null, problem);
     }
 
     // ----------------------------------------------------------------- apoio

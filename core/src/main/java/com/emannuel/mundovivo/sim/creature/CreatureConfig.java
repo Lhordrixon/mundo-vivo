@@ -10,16 +10,21 @@ package com.emannuel.mundovivo.sim.creature;
  * <p>Vale ser exato sobre o que isso garante. A história exata <em>muda</em>
  * com a taxa de quadros: passos diferentes consomem o sorteador em ordens
  * diferentes, e duas execuções a 30 e a 60 quadros divergem criatura por
- * criatura desde os primeiros segundos. O que se mantém é o comportamento
- * agregado — medido em dez sementes, a população média após vinte minutos
- * ficou em 494, 432 e 463 a 30, 60 e 90 quadros, dentro da variação entre
- * sementes. Só a 20 quadros aparece um desvio para cima (706), porque com
- * passos grossos uma criatura come um naco maior por visita.
+ * criatura desde os primeiros segundos. O que se mantinha era o
+ * comportamento agregado.
  *
- * <p>Os valores padrão foram calibrados para que a população sobreviva e
- * oscile em vez de morrer no primeiro minuto ou crescer sem limite: em doze
- * sementes testadas por trinta minutos, nenhuma extinção e nenhuma batida
- * no teto do pool. São um ponto de partida medido, não uma verdade.
+ * <p><b>Estes números foram calibrados antes de existir espécie, e a
+ * espécie os invalidou.</b> Com o acasalamento restrito a pares da mesma
+ * espécie, a população de equilíbrio caiu cerca de sete vezes e a dispersão
+ * entre taxas de quadros piorou: medido em oito sementes a vinte minutos, a
+ * média ficou em 173, 89, 63 e 73 a 20, 30, 60 e 90 quadros, e duas
+ * sementes chegam a extinguir em alguma taxa. Antes, nenhuma extinguia e as
+ * médias ficavam todas perto de 460.
+ *
+ * <p>Ou seja: os valores abaixo continuam sendo um ponto de partida medido,
+ * mas medido para um mundo de uma espécie só. O mundo de hoje é limitado
+ * por encontro de parceiro, não por comida, e rebalanceá-lo é trabalho em
+ * aberto — o README traz as alavancas já medidas, na seção sobre espécies.
  */
 public final class CreatureConfig {
 

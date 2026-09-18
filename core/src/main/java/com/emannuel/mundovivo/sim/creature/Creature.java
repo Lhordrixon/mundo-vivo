@@ -59,6 +59,18 @@ public final class Creature {
     /** Causa do último dano sofrido, ou {@code null} se ainda não levou nenhum. */
     public String lastDamageCause;
 
+    /**
+     * Espécie a que pertence: herdada dos pais, ou sorteada ao nascer sem
+     * eles — hoje, só a população inicial do mundo.
+     *
+     * <p>Diferente de {@link #factionId}, que usa -1 como "ainda não
+     * atribuído", aqui não há valor inválido: uma criatura sem espécie não
+     * faz sentido nem por um instante, e quem varre a lista de vivos não
+     * deveria precisar checar nulo. Começa na primeira constante e
+     * {@code Simulation} sobrescreve logo depois do spawn.
+     */
+    public Species species = Species.VALUES[0];
+
     /** Fome: o dano que já existia antes de haver dano externo. */
     public static final String CAUSE_STARVATION = "fome";
 
@@ -93,6 +105,10 @@ public final class Creature {
         this.reproductionCooldown = cooldown;
         this.factionId = -1;
         this.lastDamageCause = null;
+        // Valor válido, não sentinela: o slot reciclado não pode carregar a
+        // espécie da vida anterior, e também não pode ficar nulo no intervalo
+        // entre o spawn e a atribuição de quem chamou.
+        this.species = Species.VALUES[0];
     }
 
     /**
