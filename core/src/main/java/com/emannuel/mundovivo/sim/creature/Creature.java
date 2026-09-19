@@ -1,5 +1,7 @@
 package com.emannuel.mundovivo.sim.creature;
 
+import com.emannuel.mundovivo.sim.genetics.Genome;
+
 /**
  * Uma criatura.
  *
@@ -71,6 +73,37 @@ public final class Creature {
      */
     public Species species = Species.VALUES[0];
 
+    /**
+     * O genoma: oito blocos de 32 bits, herdados dos pais.
+     *
+     * <p>Alocado no construtor, uma vez por slot do pool, e reescrito a
+     * cada nascimento — nunca trocado por um array novo. É a mesma regra
+     * que vale para o resto da criatura: depois da construção do pool, a
+     * simulação não aloca.
+     *
+     * <p>Final para tornar isso impossível de violar por descuido: quem
+     * quiser mudar o genoma tem que escrever nas posições, e escrever nas
+     * posições é barato.
+     */
+    public final int[] genome = new int[Genome.BLOCKS];
+
+    // --- traços, calculados do genoma por Phenotype a cada nascimento ---
+
+    /** Porte, em fração da média da espécie. Ainda sem consumidor. */
+    public float size = 1f;
+
+    /** Velocidade própria, já multiplicada sobre a base do config. */
+    public float speedTilesPerSecond;
+
+    /** Alcance de busca por comida, já multiplicado sobre a base do config. */
+    public float visionRadiusTiles;
+
+    /** Fome por segundo desta criatura, já multiplicada sobre a base. */
+    public float metabolicRate;
+
+    /** Idade máxima desta criatura, já multiplicada sobre a base. */
+    public float maxAgeSeconds;
+
     /** Fome: o dano que já existia antes de haver dano externo. */
     public static final String CAUSE_STARVATION = "fome";
 
@@ -102,8 +135,16 @@ public final class Creature {
         return slot;
     }
 
-    /** Prepara a instância para uma nova vida. */
-    void reset(long id, float x, float y, float startingHunger, float cooldown) {
+    /**
+     * Prepara a instância para uma nova vida.
+     *
+     * @param genomaDeNascimento copiado para o genoma desta criatura;
+     *                           {@code null} zera o genoma, que é um genoma
+     *                           válido como outro qualquer — quem chama é
+     *                           que decide se preenche depois
+     */
+    void reset(long id, float x, float y, float startingHunger, float cooldown,
+               int[] genomaDeNascimento) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -120,6 +161,19 @@ public final class Creature {
         // espécie da vida anterior, e também não pode ficar nulo no intervalo
         // entre o spawn e a atribuição de quem chamou.
         this.species = Species.VALUES[0];
+
+        // Cópia posição a posição: o array é final e reaproveitado, então
+        // guardar a referência do chamador deixaria duas criaturas
+        // compartilhando genoma na primeira distração.
+        if (genomaDeNascimento == null) {
+            for (int i = 0; i < genome.length; i++) {
+                genome[i] = 0;
+            }
+        } else {
+            for (int i = 0; i < genome.length; i++) {
+                genome[i] = genomaDeNascimento[i];
+            }
+        }
     }
 
     /**

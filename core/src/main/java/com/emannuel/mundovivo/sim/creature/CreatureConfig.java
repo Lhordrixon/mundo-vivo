@@ -12,13 +12,14 @@ package com.emannuel.mundovivo.sim.creature;
  * diferentes, e duas execuções a 30 e a 60 quadros divergem criatura por
  * criatura desde os primeiros segundos. O que se mantém é o comportamento
  * agregado — medido em doze sementes a vinte minutos, a população média
- * ficou em 218, 176 e 200 a 30, 60 e 90 quadros, sem nenhuma extinção nas
+ * ficou em 262, 233 e 195 a 30, 60 e 90 quadros, sem nenhuma extinção nas
  * 36 execuções. A dispersão entre taxas existe porque passos grossos rendem
  * mordidas maiores por visita a um tile.
  *
  * <p>Estes valores são referência de ordem de grandeza, não constantes a
  * defender: qualquer mudança que consuma o sorteador em outra ordem os
- * move. Já mudaram duas vezes por isso — quando as facções ganharam nome e
+ * move. Já mudaram três vezes por isso — a última quando a herança passou
+ * a gastar sorteios em cada nascimento — quando as facções ganharam nome e
  * cor (eram 538/445/403 antes), e de novo quando o mundo passou a fundar
  * poucos reinos contíguos. Desta última vez a mudança não foi só de
  * sorteio: com o combate corpo a corpo valendo, a fronteira entre reinos
@@ -84,6 +85,22 @@ public final class CreatureConfig {
      * couberem. Um mundo de uma criatura tem um reino.
      */
     public int initialFactions = 4;
+
+    // --- genética ---
+
+    /**
+     * Probabilidade de cada bloco do genoma sofrer uma mutação por
+     * nascimento.
+     *
+     * <p>Com 8 blocos e esta taxa, cerca de um filho em seis carrega pelo
+     * menos um bit novo. É pouco de propósito: mutação é a fonte de
+     * variação nova, mas variação nova demais afoga o sinal que a herança
+     * carrega — a inclinação da regressão filho × pais cai, e a seleção
+     * volta a não ter sobre o que agir. O teste de herdabilidade mede
+     * exatamente isso, e exige inclinação acima de 0,5 com esta taxa
+     * ligada.
+     */
+    public float mutationRatePerBlock = 0.02f;
 
     // --- metabolismo ---
 
@@ -223,6 +240,7 @@ public final class CreatureConfig {
         c.maxCreatures = maxCreatures;
         c.initialPopulation = initialPopulation;
         c.initialFactions = initialFactions;
+        c.mutationRatePerBlock = mutationRatePerBlock;
         c.hungerPerSecond = hungerPerSecond;
         c.starvationDamagePerSecond = starvationDamagePerSecond;
         c.hazardDamagePerSecond = hazardDamagePerSecond;
@@ -258,6 +276,8 @@ public final class CreatureConfig {
         // reino). Recusar isso quebraria mundos pequenos legítimos, como os
         // dos testes, sem proteger de nada.
         require(initialFactions > 0, "initialFactions deve ser > 0");
+        require(mutationRatePerBlock >= 0f && mutationRatePerBlock <= 1f,
+                "mutationRatePerBlock precisa ser uma probabilidade em [0,1]");
         require(hungerPerSecond > 0f, "hungerPerSecond deve ser > 0");
         require(hazardDamagePerSecond >= 0f,
                 "hazardDamagePerSecond não pode ser negativa, senão terreno perigoso cura");

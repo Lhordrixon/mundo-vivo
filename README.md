@@ -26,6 +26,7 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 4. Facções e território | pronto e testado |
 | 4b. Nome e cor por facção | pronto e testado, sem consumidor na tela |
 | 4c. Fundação de reinos contíguos | pronto e testado |
+| 4d. Genoma de blocos, herdável | pronto e testado |
 | 5. Save/load | não começou |
 | 6. Poderes de deus | não começou |
 | 7. IA de guerra | não começou |
@@ -317,6 +318,103 @@ território guarda o id como um inteiro qualquer no tile), e na prática as
 240 facções nascem todas com um membro, 237 delas com território, zero
 tiles com dono inválido. O que muda de verdade é o retrato: o mapa de
 territórios nasce com o dobro de retalhos.
+
+### Como a herança funciona
+
+Toda criatura carrega um genoma: oito blocos de 32 bits. Cada bloco não é
+um gene — é a semente de muitos. `Genome.gene(bloco, índice)` expande um
+bloco em quantos valores se quiser, por hash puro, então 32 bytes viram um
+número ilimitado de genes sem ocupar memória nenhuma.
+
+No nascimento, `Inheritance.cross` dá ao filho cada bloco **inteiro** de um
+dos dois pais, por moeda justa, e `Inheritance.mutate` inverte um bit com
+2% de chance por bloco. `Phenotype` traduz o genoma em traços.
+
+#### Por que blocos, e não uma semente por criatura
+
+A alternativa óbvia é guardar uma semente só e fazer
+`filho = hash(pai, mãe)`. É mais simples, e está errada — de um jeito que
+não aparece olhando o código rodar.
+
+O hash de dois pais é um valor descorrelacionado dos dois. Dois pais
+grandes gerariam um filho pequeno com a mesma probabilidade de qualquer
+outro. Sem correlação entre pai e filho não existe herdabilidade, e **sem
+herdabilidade a seleção natural não seleciona nada**: nascer bem-adaptado
+deixa de aumentar a chance de ter filhos bem-adaptados. O que sobra é
+deriva aleatória com aparência de evolução, que é o pior resultado
+possível — parece que funciona, os números se mexem, e não há nada ali.
+
+Herdar blocos inteiros conserta isso, porque o bloco chega intacto e tudo
+que ele codifica chega junto. De brinde vem a ligação gênica: genes do
+mesmo bloco viajam juntos de geração em geração, que é como funciona na
+natureza.
+
+**O contraste está medido, não argumentado.** `HeritabilityTest` roda os
+dois esquemas lado a lado, com 5000 casais cada, e faz a regressão do traço
+do filho sobre a média dos pais:
+
+| esquema | inclinação |
+|---|---|
+| blocos, sem mutação | **1,008** |
+| blocos, mutação de 2% | **1,001** |
+| blocos, mutação de 20% | 0,810 |
+| `filho = hash(pai, mãe)` | **0,020** |
+
+Inclinação 1 significa que o filho é, em média, exatamente a média dos
+pais. Inclinação 0 significa que saber os pais não diz nada. A diferença
+entre os dois esquemas não é de grau — é entre ter herança e não ter.
+
+#### Traços aditivos, e por que nunca um gene só
+
+Cada traço é a média de doze genes espalhados por quatro blocos. Um traço
+de gene único seria um degrau: ou o filho herdou aquele bloco e tem o valor
+do pai, ou herdou o outro e tem o da mãe. A média dos pais não preveria
+nada, e a seleção só conseguiria mover a população aos saltos. Somando doze
+genes, o traço vira contínuo e o filho cai perto da média dos pais.
+
+O teorema central do limite entra de graça: a média de doze uniformes se
+concentra no meio da faixa, então a maioria nasce mediana e os extremos são
+raros — o formato certo para uma população.
+
+Os traços **multiplicam** os valores base do `CreatureConfig`, numa faixa
+estreita de 0,7× a 1,3×, e na prática quase toda criatura fica entre 0,85×
+e 1,15×. A faixa é estreita de propósito: o equilíbrio populacional deste
+jogo foi calibrado com medição, e genética não é desculpa para
+desregulá-lo. Hoje o genoma decide velocidade, alcance de visão,
+metabolismo e idade máxima. `size` é calculado e ainda não tem consumidor —
+está declarado aqui para não virar o `WorldRenderer.tileX` da próxima
+safra.
+
+#### E a seleção, já acontece?
+
+Herdabilidade é a condição para a seleção existir, não a prova de que ela
+está agindo. Medindo a média dos traços no instante zero e depois de 20
+minutos simulados, em três sementes:
+
+| traço | 12345 | 2026 | 777 |
+|---|---|---|---|
+| metabolismo | −1,4% | +1,4% | −2,2% |
+| idade máxima | +2,5% | +0,2% | +3,0% |
+| visão | +0,2% | +2,2% | −2,4% |
+
+Metabolismo e visão andam para os dois lados: em vinte minutos, que dá
+umas sete gerações, o que se vê neles é deriva. **Idade máxima sobe nas
+três**, que é o esperado — é o traço com a ligação mais direta com o
+número de filhos, porque viver mais é ter mais tempo de reproduzir.
+
+Três sementes é pouco para afirmar seleção com confiança, e a direção
+consistente pode ser coincidência (1 em 8, se fosse moeda). O que se pode
+dizer sem exagero: o mecanismo está de pé e o traço mais acoplado à
+aptidão é o único que se move de forma consistente. Demonstrar seleção de
+verdade pede corridas mais longas, e isso é outra fatia.
+
+#### Alocação zero
+
+Nenhum `new` por criatura, por nascimento ou por quadro. O `int[8]` de cada
+criatura nasce no construtor do pool, junto com ela; `cross`, `mutate` e
+`random` escrevem no array que recebem e não devolvem nada; `Phenotype`
+escreve em campos primitivos. `Simulation` tem um único genoma de rascunho,
+alocado uma vez, que carrega a herança da montagem até o recém-nascido.
 
 ### Como a vida é tirada
 
@@ -617,7 +715,7 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
 
 - Todo o código, incluindo `render/` e os dois launchers, compila com
   `-Xlint:all` sem um único aviso.
-- As 89 verificações de `SimSelfTest` passam. Mundo: determinismo por
+- As 95 verificações de `SimSelfTest` passam. Mundo: determinismo por
   semente, sementes diferentes divergindo, todo tile com tipo válido,
   elevação sempre em [0,1], proporção terra/mar jogável em 6 sementes,
   presença de oceano profundo e de montanha, geração em 18 ms. Comida:
@@ -639,6 +737,12 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   oceano profundo é perigoso, golpe do jogador fere quem está no tile,
   golpes repetidos matam pelo caminho de morte compartilhado, golpe em
   tile vazio e golpe fora do mundo não fazem nada nem estouram.
+  Genética: herdabilidade medida em 5000 casais (inclinação 1,008 sem
+  mutação, 1,001 com a mutação padrão), o esquema ingênuo
+  `filho = hash(pai, mãe)` medido lado a lado e reprovado (0,020), todo
+  bloco do filho vindo inteiro de um dos pais por moeda justa, mesmo par e
+  mesmo estado de `Rng` dando o mesmo filho bit a bit, genes do mesmo bloco
+  descorrelacionados, e traço aditivo concentrado no meio da faixa.
   Fundação de reinos: o mundo funda o número pedido de facções e não uma
   por fundador, ninguém nasce sem facção, a soma dos membros bate com a
   população, os reinos saem contíguos (mais de 80% com o vizinho mais
@@ -652,14 +756,15 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   mundo gerado normal sem nenhuma morte por dano de terreno.
 - A saída visual do mundo foi conferida: mapas em várias sementes, com
   continentes, cordilheiras com neve no cume, litoral e calota polar.
-- Comportamento da população, **remedido com os reinos contíguos e o
-  combate valendo**: 12 sementes a 20 minutos e 60 quadros, populações
-  finais entre 33 e 448, média 176, **nenhuma extinção e nenhuma batida no
-  teto do pool**.
-- Estabilidade por taxa de quadros, **remedida com os reinos contíguos e o
-  combate valendo**: 12 sementes a 20 minutos, população média de 218, 176
-  e 200 a 30, 60 e 90 quadros por segundo, **sem nenhuma extinção nas 36
-  execuções**. A dispersão entre taxas continua existindo — passos grossos
+- Comportamento da população, **remedido com a herança genética ligada**:
+  12 sementes a 20 minutos e 60 quadros, populações finais entre 84 e 459,
+  média 233, **nenhuma extinção e nenhuma batida no teto do pool**.
+- Estabilidade por taxa de quadros, **remedida com a herança genética
+  ligada**: 12 sementes a 20 minutos, população média de 262, 233 e 195 a
+  30, 60 e 90 quadros por segundo, **sem nenhuma extinção nas 36
+  execuções**. Eram 218, 176 e 200 antes da genética: os traços variam em
+  torno de 1,0×, então a mudança é deslocamento do sorteador, não um
+  ganho que a genética tenha trazido. A dispersão entre taxas continua existindo — passos grossos
   rendem mordidas maiores — mas é variação, não diferença entre viver e
   morrer. Os números caíram para cerca de um terço do que eram sem
   combate (532/479/458): é a fronteira cobrando, não uma regressão.

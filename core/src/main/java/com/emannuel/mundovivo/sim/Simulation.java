@@ -7,6 +7,9 @@ import com.emannuel.mundovivo.sim.creature.CreatureState;
 import com.emannuel.mundovivo.sim.creature.Species;
 import com.emannuel.mundovivo.sim.ecology.FoodMap;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
+import com.emannuel.mundovivo.sim.genetics.Inheritance;
+import com.emannuel.mundovivo.sim.genetics.Genome;
+import com.emannuel.mundovivo.sim.genetics.Phenotype;
 import com.emannuel.mundovivo.sim.faction.Territory;
 import com.emannuel.mundovivo.sim.util.Rng;
 import com.emannuel.mundovivo.sim.world.TileType;
@@ -79,6 +82,16 @@ public final class Simulation {
     private long deathsByOldAge;
     private long deathsByExternalDamage;
     private long deathsByCombat;
+
+    /**
+     * Rascunho de genoma, usado entre montar a herança e entregá-la ao
+     * recém-nascido.
+     *
+     * <p>Um array só, para a simulação inteira, alocado aqui e nunca mais.
+     * Um genoma novo por nascimento seria lixo a cada parto, e nascimento
+     * é coisa de laço quente.
+     */
+    private final int[] genomaDeNascimento = new int[Genome.BLOCKS];
 
     public Simulation(World world, CreatureConfig config) {
         config.validate();
@@ -201,7 +214,11 @@ public final class Simulation {
     private void stepCreature(Creature c, float dt) {
         c.age += dt;
         c.reproductionCooldown -= dt;
-        c.hunger += config.hungerPerSecond * dt;
+        // Traço, não constante: o metabolismo desta criatura veio do genoma
+        // dela. Cai para config.hungerPerSecond quando o fenótipo ainda não
+        // foi calculado, que é o caso de quem nasce por spawn direto nos
+        // testes.
+        c.hunger += (c.metabolicRate > 0f ? c.metabolicRate : config.hungerPerSecond) * dt;
 
         if (c.hunger >= 1f) {
             c.hunger = 1f;
@@ -237,7 +254,7 @@ public final class Simulation {
         if (resolveDeathFromDamage(c)) {
             return;
         }
-        if (c.age >= config.maxAgeSeconds) {
+        if (c.age >= (c.maxAgeSeconds > 0f ? c.maxAgeSeconds : config.maxAgeSeconds)) {
             deathsByOldAge++;
             die(c);
             return;
@@ -268,7 +285,7 @@ public final class Simulation {
 
     private void stepSeekingFood(Creature c, float dt) {
         if (c.targetTile < 0 || !foodMap.isEdible(c.targetTile)) {
-            c.targetTile = findFoodNear(c.tileX(), c.tileY());
+            c.targetTile = findFoodNear(c.tileX(), c.tileY(), visionOf(c));
         }
         if (c.targetTile < 0) {
             // Nada comestível por perto: continua andando em vez de parar,
@@ -342,10 +359,16 @@ public final class Simulation {
         float x = tile % world.width() + 0.5f;
         float y = tile / world.width() + 0.5f;
 
+        // Herança: blocos inteiros de cada pai, depois mutação. Nesta ordem,
+        // porque mutar antes de cruzar mutaria o genoma de um dos pais.
+        Inheritance.cross(a.genome, b.genome, genomaDeNascimento, rng);
+        Inheritance.mutate(genomaDeNascimento, config.mutationRatePerBlock, rng);
+
         // Pool cheio devolve null: é o teto de população, não um erro.
-        Creature child = pool.spawn(x, y, config.newbornHunger, 0f);
+        Creature child = pool.spawn(x, y, config.newbornHunger, 0f, genomaDeNascimento);
         if (child != null) {
             births++;
+            Phenotype.apply(child, config);
             // Herda a facção de um dos pais, sorteado. Os dois quase sempre
             // são da mesma facção — a busca por parceiro tende a achar
             // vizinhos, e vizinhos descendem de gente próxima — mas nada
@@ -566,7 +589,9 @@ public final class Simulation {
             return true;
         }
 
-        float stride = config.speedTilesPerSecond * dt;
+        float stride =
+                (c.speedTilesPerSecond > 0f ? c.speedTilesPerSecond
+                        : config.speedTilesPerSecond) * dt;
         if (stride >= distance) {
             moveTo(c, targetX, targetY);
             return true;
@@ -619,8 +644,19 @@ public final class Simulation {
      * caso comum, com comida ao redor, ela para no primeiro ou no segundo
      * anel e nunca chega perto do custo do raio inteiro.
      */
-    private int findFoodNear(int centerX, int centerY) {
-        int radius = config.searchRadiusTiles;
+    /**
+     * Raio de visão desta criatura, em tiles inteiros.
+     *
+     * <p>Pelo menos 1: um raio zero faria a criatura só enxergar o tile em
+     * que já está, e o fenótipo nunca chega tão baixo — mas um arredondamento
+     * infeliz num config futuro poderia.
+     */
+    private int visionOf(Creature c) {
+        float raio = c.visionRadiusTiles > 0f ? c.visionRadiusTiles : config.searchRadiusTiles;
+        return Math.max(1, Math.round(raio));
+    }
+
+    private int findFoodNear(int centerX, int centerY, int radius) {
 
         if (isEdibleTile(centerX, centerY)) {
             return world.index(centerX, centerY);
@@ -696,10 +732,16 @@ public final class Simulation {
             // Idades e fomes iniciais espalhadas de propósito: uma população
             // inteira nascida no mesmo instante morreria de velhice junta e
             // o mundo pulsaria em ondas em vez de se estabilizar.
-            Creature c = pool.spawn(x + 0.5f, y + 0.5f, rng.range(0f, 0.35f), 0f);
+            // Fundador não tem de quem herdar: genoma sorteado inteiro. É
+            // daqui que sai toda a variação genética do mundo — tudo que
+            // nascer depois é recombinação disto, mais mutação.
+            Inheritance.random(genomaDeNascimento, rng);
+            Creature c = pool.spawn(x + 0.5f, y + 0.5f, rng.range(0f, 0.35f), 0f,
+                    genomaDeNascimento);
             if (c == null) {
                 break;
             }
+            Phenotype.apply(c, config);
             c.age = rng.range(0f, config.adultAgeSeconds * 1.5f);
             // A facção é a do centro mais próximo: quem nasce vizinho de
             // alguém nasce compatriota dele. Ver placeFactionCentres.

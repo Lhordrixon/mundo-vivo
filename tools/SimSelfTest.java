@@ -7,6 +7,9 @@ import com.emannuel.mundovivo.sim.creature.Species;
 import com.emannuel.mundovivo.sim.ecology.FoodMap;
 import com.emannuel.mundovivo.sim.faction.FactionRegistry;
 import com.emannuel.mundovivo.sim.faction.Territory;
+import com.emannuel.mundovivo.sim.genetics.Genome;
+import com.emannuel.mundovivo.sim.genetics.Inheritance;
+import com.emannuel.mundovivo.sim.genetics.Phenotype;
 import com.emannuel.mundovivo.sim.noise.FractalNoise;
 import com.emannuel.mundovivo.sim.util.Rng;
 import com.emannuel.mundovivo.sim.world.TileType;
@@ -116,6 +119,14 @@ public final class SimSelfTest {
         repeatedStrikesKillThroughTheSharedDeathPath();
         strikeOnEmptyTileChangesNothing();
         strikeOutsideTheWorldIsIgnored();
+
+        System.out.println("\n-- Genetica --");
+        heritabilitySlopeIsNearOne();
+        naiveHashSchemeLosesHeritability();
+        inheritanceIsDeterministic();
+        childBlocksComeWholeFromAParent();
+        genesFromTheSameBlockAreIndependent();
+        additiveTraitConcentratesInTheMiddle();
 
         System.out.println("\n-- Combate corpo a corpo --");
         differentFactionsHurtEachOther();
@@ -1301,6 +1312,152 @@ public final class SimSelfTest {
     // -------------------------------------------------------------- espécies
 
     /** Campo aberto e vazio: o teste coloca quem quiser, onde quiser. */
+    // -------------------------------------------------------------- genetica
+
+    private static final int[] BLOCOS_DO_TRACO = {0, 1, 2, 3};
+
+    private static double tracoDeTeste(int[] genoma) {
+        return Phenotype.traco(genoma, BLOCOS_DO_TRACO, 0);
+    }
+
+    /** Inclinação da regressão do traço do filho sobre a média dos pais. */
+    private static float inclinacaoFilhoSobrePais(float taxaMutacao, long semente,
+                                                  boolean ingenuo) {
+        Rng rng = new Rng(semente);
+        int[] pai = new int[Genome.BLOCKS];
+        int[] mae = new int[Genome.BLOCKS];
+        int[] filho = new int[Genome.BLOCKS];
+        int n = 5000;
+        double sx = 0, sy = 0, sxy = 0, sxx = 0;
+
+        for (int i = 0; i < n; i++) {
+            Inheritance.random(pai, rng);
+            Inheritance.random(mae, rng);
+            if (ingenuo) {
+                for (int b = 0; b < Genome.BLOCKS; b++) {
+                    filho[b] = misturaIngenua(pai[b], mae[b]);
+                }
+            } else {
+                Inheritance.cross(pai, mae, filho, rng);
+                Inheritance.mutate(filho, taxaMutacao, rng);
+            }
+            double x = (tracoDeTeste(pai) + tracoDeTeste(mae)) / 2.0;
+            double y = tracoDeTeste(filho);
+            sx += x; sy += y; sxy += x * y; sxx += x * x;
+        }
+        return (float) ((n * sxy - sx * sy) / (n * sxx - sx * sx));
+    }
+
+    /** O esquema que NÃO foi adotado, aqui só para ser provado errado. */
+    private static int misturaIngenua(int pai, int mae) {
+        long z = ((long) pai << 32) ^ (mae & 0xFFFFFFFFL);
+        z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+        z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+        return (int) (z ^ (z >>> 31));
+    }
+
+    private static void heritabilitySlopeIsNearOne() {
+        float semMutacao = inclinacaoFilhoSobrePais(0f, 4242L, false);
+        float comMutacao = inclinacaoFilhoSobrePais(0.02f, 4242L, false);
+        check("o filho é a média dos pais: herdabilidade perto de 1",
+                semMutacao > 0.8f && semMutacao < 1.2f && comMutacao > 0.5f,
+                String.format("sem mutação=%.3f com mutação=%.3f", semMutacao, comMutacao));
+    }
+
+    private static void naiveHashSchemeLosesHeritability() {
+        float blocos = inclinacaoFilhoSobrePais(0f, 99L, false);
+        float ingenuo = inclinacaoFilhoSobrePais(0f, 99L, true);
+        check("filho=hash(pai,mãe) perde a herdabilidade que os blocos preservam",
+                Math.abs(ingenuo) < 0.15f && blocos > 0.8f,
+                String.format("blocos=%.3f ingênuo=%.3f", blocos, ingenuo));
+    }
+
+    private static void inheritanceIsDeterministic() {
+        int[] pai = new int[Genome.BLOCKS];
+        int[] mae = new int[Genome.BLOCKS];
+        Inheritance.random(pai, new Rng(1L));
+        Inheritance.random(mae, new Rng(2L));
+
+        int[] a = new int[Genome.BLOCKS];
+        int[] b = new int[Genome.BLOCKS];
+        Rng rngA = new Rng(777L);
+        Inheritance.cross(pai, mae, a, rngA);
+        Inheritance.mutate(a, 0.02f, rngA);
+        Rng rngB = new Rng(777L);
+        Inheritance.cross(pai, mae, b, rngB);
+        Inheritance.mutate(b, 0.02f, rngB);
+
+        boolean iguais = true;
+        for (int i = 0; i < Genome.BLOCKS; i++) {
+            iguais &= a[i] == b[i];
+        }
+        check("mesmo par e mesmo estado de Rng dão o mesmo filho, bit a bit", iguais,
+                "duas execuções do mesmo cruzamento divergiram");
+    }
+
+    private static void childBlocksComeWholeFromAParent() {
+        Rng rng = new Rng(31337L);
+        int[] pai = new int[Genome.BLOCKS];
+        int[] mae = new int[Genome.BLOCKS];
+        int[] filho = new int[Genome.BLOCKS];
+        boolean todosInteiros = true;
+        int doPai = 0;
+        int total = 0;
+
+        for (int r = 0; r < 500; r++) {
+            Inheritance.random(pai, rng);
+            Inheritance.random(mae, rng);
+            Inheritance.cross(pai, mae, filho, rng);
+            for (int b = 0; b < Genome.BLOCKS; b++) {
+                todosInteiros &= filho[b] == pai[b] || filho[b] == mae[b];
+                if (filho[b] == pai[b]) {
+                    doPai++;
+                }
+                total++;
+            }
+        }
+        float fracao = (float) doPai / total;
+        check("todo bloco do filho veio inteiro de um dos pais, por moeda justa",
+                todosInteiros && fracao > 0.45f && fracao < 0.55f,
+                String.format("inteiros=%s fração do pai=%.3f", todosInteiros, fracao));
+    }
+
+    private static void genesFromTheSameBlockAreIndependent() {
+        int amostras = 20000;
+        double sx = 0, sy = 0, sxy = 0, sxx = 0, syy = 0;
+        for (int i = 0; i < amostras; i++) {
+            int bloco = (int) new Rng(i).nextLong();
+            double x = Genome.gene(bloco, 0);
+            double y = Genome.gene(bloco, 1);
+            sx += x; sy += y; sxy += x * y; sxx += x * x; syy += y * y;
+        }
+        double cov = amostras * sxy - sx * sy;
+        double r = cov / Math.sqrt((amostras * sxx - sx * sx) * (amostras * syy - sy * sy));
+        check("dois genes do mesmo bloco não andam juntos", Math.abs(r) < 0.05,
+                String.format("correlação=%.4f", r));
+    }
+
+    private static void additiveTraitConcentratesInTheMiddle() {
+        Rng rng = new Rng(555L);
+        int[] genoma = new int[Genome.BLOCKS];
+        int amostras = 20000;
+        double soma = 0;
+        int extremos = 0;
+        for (int i = 0; i < amostras; i++) {
+            Inheritance.random(genoma, rng);
+            double t = tracoDeTeste(genoma);
+            soma += t;
+            if (t < 0.2 || t > 0.8) {
+                extremos++;
+            }
+        }
+        double media = soma / amostras;
+        double fracaoExtremos = (double) extremos / amostras;
+        check("traço aditivo se concentra no meio, sem empilhar nos extremos",
+                Math.abs(media - 0.5) < 0.02 && fracaoExtremos < 0.05,
+                String.format("média=%.4f extremos=%.4f", media, fracaoExtremos));
+    }
+
     // ------------------------------------------------- combate corpo a corpo
 
     /** Adulta, saciada e parada: espera longa para não sair atrás de parceiro. */

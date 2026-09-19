@@ -98,12 +98,28 @@ public final class CreaturePool {
      *         um erro
      */
     public Creature spawn(float x, float y, float startingHunger, float cooldown) {
+        return spawn(x, y, startingHunger, cooldown, null);
+    }
+
+    /**
+     * Traz uma criatura à vida com um genoma.
+     *
+     * <p>O genoma é copiado, não guardado por referência: {@code genoma}
+     * costuma ser um rascunho reaproveitado pelo chamador, e a criatura não
+     * pode passar a vida apontando para ele.
+     *
+     * @param genoma o genoma de nascimento, ou {@code null} para um genoma
+     *               zerado que o chamador preenche depois
+     * @return a criatura, ou {@code null} se o pool estiver cheio
+     */
+    public Creature spawn(float x, float y, float startingHunger, float cooldown,
+                          int[] genoma) {
         if (freeCount == 0) {
             return null;
         }
         int slot = freeStack[--freeCount];
         Creature creature = slots[slot];
-        creature.reset(nextId++, x, y, startingHunger, cooldown);
+        creature.reset(nextId++, x, y, startingHunger, cooldown, genoma);
 
         creature.activeIndex = activeCount;
         active[activeCount++] = creature;
