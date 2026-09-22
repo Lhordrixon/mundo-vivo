@@ -1,11 +1,16 @@
 name: Compilar APK
 
-# Roda a cada envio pro repositório e também pode ser disparado manualmente
-# pela aba Actions do GitHub — útil para gerar um APK sem precisar mudar
-# nada no código.
+# Roda a cada envio para a main, em todo pull request e também pode ser
+# disparado manualmente pela aba Actions do GitHub — útil para gerar um APK
+# sem precisar mudar nada no código.
+#
+# O gatilho de pull request é o que faz os testes rodarem na proposta de
+# quem contribui, antes do merge. Sem ele, um PR só era verificado depois de
+# já estar na main.
 on:
   push:
     branches: [main, master]
+  pull_request:
   workflow_dispatch:
 
 jobs:
