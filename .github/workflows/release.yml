@@ -1,0 +1,56 @@
+name: Publicar APK
+
+# Roda quando alguém envia uma tag que começa com "v" (por exemplo v0.1.0).
+# Testa, compila o APK e cria uma Release com ele anexado. Releases de
+# repositório público podem ser baixadas por qualquer pessoa, sem login.
+#
+#   git tag v0.1.0
+#   git push origin v0.1.0
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # necessário para criar a Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Rodar os testes da simulação
+        run: ./gradlew core:test
+
+      - name: Compilar o APK de depuração
+        run: ./gradlew android:assembleDebug
+
+      # Nome fixo, para o link .../releases/latest/download/mundo-vivo.apk
+      # sempre apontar para o APK mais recente.
+      - name: Dar um nome fixo ao APK
+        run: cp android/build/outputs/apk/debug/*.apk mundo-vivo.apk
+
+      # Se a Release já existir (por exemplo, criada à mão na página do
+      # GitHub junto com a tag), só anexa o APK, trocando o anterior.
+      - name: Criar a Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" mundo-vivo.apk --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" mundo-vivo.apk \
+              --title "Mundo Vivo $GITHUB_REF_NAME" \
+              --notes "APK de depuração gerado a partir da tag $GITHUB_REF_NAME.
+
+          Para instalar: baixe o mundo-vivo.apk no celular, abra o arquivo e permita a instalação de fontes desconhecidas quando o Android pedir.
+
+          Cada Release é assinada com uma chave de depuração nova. Para trocar de versão, desinstale a anterior antes."
+          fi

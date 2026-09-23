@@ -43,9 +43,10 @@ O que falta, item por item, está no [roadmap](docs/roadmap.md).
 
 ## 🚀 Como eu experimento?
 
-**No celular:** baixe o APK da execução mais recente na aba
-[Actions](https://github.com/Lhordrixon/mundo-vivo/actions/workflows/build.yml),
-em *Artifacts*. É preciso estar logado no GitHub.
+**No celular:** baixe o
+[**mundo-vivo.apk** da última versão](https://github.com/Lhordrixon/mundo-vivo/releases/latest/download/mundo-vivo.apk),
+sem precisar de login, e abra o arquivo. As versões anteriores ficam em
+[Releases](https://github.com/Lhordrixon/mundo-vivo/releases).
 
 **No computador:** precisa do JDK 17 e do Android Studio instalados.
 
