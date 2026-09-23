@@ -20,10 +20,14 @@ população inteira tinha antes.
 - A população voltou à ordem de grandeza de antes das espécies, sem
   extinção nas 36 execuções medidas.
 - A comida voltou a ser consumida (66–77% do total, oscilando), e as
-  mortes por fome voltaram a existir. O mundo voltou a ser limitado por
-  comida, pela natalidade.
+  mortes por fome voltaram a existir: 679 e 1086 em quarenta minutos,
+  contra 19 com 120 fundadores, quando a comida ficava 99% intocada. O
+  mundo voltou a ser limitado por comida, pela natalidade.
 - Na época, cada fundador fundava o próprio reino, então o número de
-  reinos também dobrou. Isso deixou de valer com a
+  reinos também dobrou, para 240. Foi conferido antes: nem
+  `FactionRegistry` nem `Territory` supõem um número máximo de reinos, e as
+  240 facções nasciam com um membro cada, 237 delas com território, sem
+  nenhum tile com dono inválido. Isso deixou de valer com a
   [decisão 0006](0006-poucos-reinos-contiguos.md).
 
 <details>

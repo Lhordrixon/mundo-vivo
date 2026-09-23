@@ -133,7 +133,9 @@ reaproveitados. Recalcular não aloca memória.
 Num empate exato de distância, o tile fica com quem aparece primeiro na
 lista de criaturas. É arbitrário, mas determinístico, e é isso que importa.
 
-Um recálculo custa cerca de 0,3 ms, com folga no segundo de intervalo.
+Um recálculo custa cerca de 0,3 ms (medido no `SimSelfTest` com pouco
+mais de 350 criaturas), com folga no segundo de intervalo. Os números
+atuais estão em [verificação](../verificacao.md).
 
 </details>
 
@@ -167,8 +169,9 @@ tela indica o que ela está fazendo, não o reino. Está anotado em
 <summary>Como as cores ficam diferentes entre si</summary>
 
 A cor não é sorteada: é calculada a partir do número do reino. Cada reino
-gira cerca de 137,5° no círculo de cores em relação ao anterior. É o giro da
-razão áurea, que espalha as cores o máximo possível.
+gira cerca de 137,5° no círculo de cores em relação ao anterior: o número
+do reino multiplicado pelo inverso da razão áurea (0,618…). É o giro que
+espalha as cores o máximo possível, para qualquer quantidade de reinos.
 
 Sortear seria pior: sorteios agrupam, e dois reinos vizinhos poderiam ficar
 com o mesmo tom. O sorteio decide só a saturação e o brilho, entre quatro
