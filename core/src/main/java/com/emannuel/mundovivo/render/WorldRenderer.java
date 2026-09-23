@@ -14,11 +14,9 @@ import com.emannuel.mundovivo.sim.world.World;
  * pixel por tile, enviado à GPU como uma {@link Texture} e desenhado como
  * um único quad esticado, com filtro {@code Nearest}.
  *
- * <p>A alternativa óbvia — um sprite por tile — custaria 49 mil chamadas
- * de desenho por frame em um mundo 256x192. Aqui é uma. O preço é que
- * alterar o terreno exige reenviar a textura, e é por isso que existe o
- * controle de "sujo": a transferência só acontece em frames nos quais algo
- * realmente mudou, e não a cada frame.
+ * <p>Uma chamada de desenho por frame, em vez de uma por tile; mudar o
+ * terreno só reenvia a textura nos frames marcados como "sujos". Por quê:
+ * docs/decisoes/0003-mundo-como-textura.md.
  *
  * <p>Esta classe é a única do projeto que conhece ao mesmo tempo o mundo e
  * o libGDX; a simulação não sabe que ela existe.

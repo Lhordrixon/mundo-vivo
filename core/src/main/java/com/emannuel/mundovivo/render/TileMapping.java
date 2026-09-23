@@ -9,15 +9,9 @@ package com.emannuel.mundovivo.render;
  * ser conferido sem uma janela aberta — este aqui tem, e é justamente o
  * trecho onde mora a pegadinha: a inversão vertical.
  *
- * <p><b>Por que isso não vive dentro do {@link WorldRenderer}.</b> A conta
- * é aritmética pura e não toca em nada de gráfico, mas o
- * {@code WorldRenderer} carrega um {@code Pixmap} e uma {@code Texture} no
- * construtor, que exigem biblioteca nativa e contexto de vídeo. Enquanto a
- * conta morasse lá dentro, nenhum teste conseguia alcançá-la sem abrir uma
- * janela — e o README registrava, com razão, que a orientação do mapa
- * nunca tinha sido provada. Aqui ela é testável em um JVM sem tela.
- * {@code WorldRenderer.tileX} e {@code tileY} continuam existindo e
- * continuam sendo o que o jogo chama; eles delegam para cá.
+ * <p>Fica fora do {@link WorldRenderer} para ser testável sem placa de
+ * vídeo; {@code WorldRenderer.tileX} e {@code tileY} delegam para cá. Por
+ * quê: docs/decisoes/0001-simulacao-sem-libgdx.md.
  *
  * <p><b>A inversão vertical.</b> A linha 0 do mundo é o topo, mas a origem
  * do desenho na GPU fica embaixo — por isso o mapa é desenhado com

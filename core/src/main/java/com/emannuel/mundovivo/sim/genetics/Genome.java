@@ -8,23 +8,9 @@ package com.emannuel.mundovivo.sim.genetics;
  * quiser, por hash puro. Um genoma de 32 bytes vira, na prática, um número
  * ilimitado de genes — e nenhum deles ocupa memória.
  *
- * <p><b>Por que blocos, e não uma semente só.</b> A alternativa óbvia é
- * guardar uma semente por criatura e fazer {@code filho = hash(pai, mãe)}.
- * Ela é mais simples e está errada: o hash de dois pais é um valor
- * descorrelacionado dos dois. Dois pais grandes gerariam um filho pequeno
- * com a mesma probabilidade de qualquer outro, e sem correlação entre pai e
- * filho não existe herdabilidade. Sem herdabilidade a seleção natural não
- * seleciona nada — o que sobra é deriva aleatória com aparência de
- * evolução, que é o pior dos mundos: parece que funciona.
- *
- * <p>Blocos consertam isso porque o filho recebe blocos <em>inteiros</em>
- * de cada pai. O bloco chega intacto, então tudo que ele codifica chega
- * junto, e a correlação pai-filho sobrevive. De brinde vem a ligação
- * gênica: genes do mesmo bloco são herdados juntos, que é como funciona de
- * verdade, e não uma aproximação simpática.
- *
- * <p>O contraste entre os dois esquemas não está só escrito aqui — está
- * medido em {@code HeritabilityTest}, que roda os dois lado a lado.
+ * <p>Blocos inteiros, e não {@code filho = hash(pai, mãe)}, para o filho
+ * parecer com os pais e a seleção natural ter o que selecionar. Por quê, e
+ * a medição: docs/decisoes/0005-genoma-em-blocos.md.
  *
  * <p>Classe utilitária: não há instância de {@code Genome} por criatura. O
  * genoma de uma criatura é o {@code int[]} que ela carrega, alocado uma vez
