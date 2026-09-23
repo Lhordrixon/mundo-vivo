@@ -29,7 +29,8 @@ BUILD SUCCESSFUL
 
 É esse comando que a CI roda em todo pull request. A CI também gera o
 APK com `./gradlew android:assembleDebug`. Ela não compila o módulo
-`desktop`.
+`desktop`. Uma tag `v*` roda os mesmos testes antes de publicar o APK
+numa Release.
 
 ### Só com o JDK, sem Gradle
 

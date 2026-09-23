@@ -174,6 +174,10 @@ Todas ficam em `gradle.properties`.
 ./gradlew android:installDebug   # instala no celular ligado por USB
 ```
 
+Cada tag `v*` enviada ao GitHub dispara `.github/workflows/release.yml`,
+que testa, compila o APK de depuração e cria uma Release com ele anexado,
+com o nome fixo `mundo-vivo.apk`.
+
 Para o APK de release é preciso criar uma chave de assinatura e declará-la
 em `android/build.gradle`. Sem isso, `assembleRelease` gera um APK não
 assinado, que o Android recusa instalar.
