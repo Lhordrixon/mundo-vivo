@@ -1,16 +1,11 @@
 # Mundo Vivo
 
-> **[Auditoria de paridade com o WorldBox →](AUDITORIA.md)**
-> 217 funcionalidades comparadas item a item, com evidência de código.
-> 26 implementadas, 184 ausentes, 13,4% de cobertura — atualizado até este commit.
+> **[Roadmap →](docs/roadmap.md)** — o que existe, o que falta e onde
+> cada coisa está no código.
 
 Jogo de sandbox de deus para Android: um mundo em grade que nasce de uma
-semente, com biomas, relevo e — nas etapas seguintes — criaturas e
-civilizações autônomas.
-
-Inspirado no gênero que o WorldBox popularizou. **Nenhum código, arte,
-som ou texto do WorldBox foi usado**: tudo aqui é implementação original.
-Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
+semente, com biomas, relevo e criaturas autônomas que vivem, se reproduzem
+e brigam entre reinos.
 
 ---
 
@@ -34,11 +29,12 @@ Mecânica de jogo não tem proteção de direito autoral; código e arte têm.
 | 9. Dano externo e terreno perigoso | pronto e testado |
 | 10. Primeiro poder do jogador: toque que fere | pronto e testado |
 | 11. Espécie herdável, com acasalamento restrito | pronto e testado |
+| 12. Combate corpo a corpo entre reinos | pronto e testado |
 
 O que roda hoje: o app abre, gera um mundo de 256x192 tiles, espalha 240
 criaturas pela terra firme e as deixa viver. Elas procuram comida, comem,
-procuram parceiro, se reproduzem, envelhecem e morrem — de fome ou de
-velhice. A comida cresce de volta conforme a fertilidade do bioma, então a
+procuram parceiro, se reproduzem, envelhecem e morrem — de fome, de
+velhice ou em combate. A comida cresce de volta conforme a fertilidade do bioma, então a
 população cresce onde a terra é boa e míngua onde não é.
 
 A cor de cada criatura mostra o que ela está fazendo: branco vagando,
@@ -46,9 +42,10 @@ amarelo procurando comida, verde comendo, rosa procurando parceiro. É o que
 torna a simulação legível de relance — dá para ver o amarelo se espalhar
 por uma região antes de a população cair ali.
 
-Por baixo, cada criatura também já pertence a uma facção, herdada dos pais,
-e o mundo já sabe de quem é cada tile de terra — o território de cada
-facção, recalculado algumas vezes por segundo. Isso ainda não aparece na
+Por baixo, cada criatura também já pertence a um de quatro reinos, herdado
+dos pais, e criaturas de reinos diferentes se ferem quando ficam próximas.
+O mundo também já sabe de quem é cada tile de terra — o território de cada
+facção, recalculado uma vez por segundo. Isso ainda não aparece na
 tela: não há bandeira, nem cor de facção, nem fronteira desenhada. É
 território no sentido de dado da simulação, pronto para o sistema de
 guerra usar; a parte visual fica para quando `render/` for a vez.
@@ -70,7 +67,9 @@ Requisitos: JDK 17 ou superior e Android Studio (que já traz o SDK do
 Android). Na primeira execução o Gradle baixa o libGDX e o plugin do
 Android — precisa de internet.
 
-**Caminho mais curto — rodar no PC, sem celular e sem SDK do Android:**
+**Caminho mais curto — rodar no PC, sem celular.** Precisa do SDK do
+Android instalado (vem com o Android Studio), porque o Gradle carrega o
+plugin do Android até para o módulo `desktop`:
 
 ```bash
 ./gradlew desktop:run
@@ -310,14 +309,14 @@ para 66–77% e oscila, e as mortes por fome voltam a aparecer: 679 e 1086 em
 quarenta minutos, contra 19 antes. O mundo voltou a ser limitado por
 comida, pela natalidade, que é o regime que este projeto quer.
 
-**O preço do conserto:** cada fundador funda a sua própria facção, então
-dobrar fundadores dobra as facções iniciais — 240 em vez de 120. Isso foi
-conferido antes de aplicar: nem o `FactionRegistry` nem o `Territory` têm
-teto ou suposição de contagem (o registro dobra o array conforme precisa, o
-território guarda o id como um inteiro qualquer no tile), e na prática as
-240 facções nascem todas com um membro, 237 delas com território, zero
-tiles com dono inválido. O que muda de verdade é o retrato: o mapa de
-territórios nasce com o dobro de retalhos.
+**O preço do conserto, na época:** cada fundador fundava a sua própria
+facção, então dobrar fundadores dobrou as facções iniciais — 240 em vez de
+120. Isso foi conferido antes de aplicar: nem o `FactionRegistry` nem o
+`Territory` têm teto ou suposição de contagem, e as 240 facções nasciam
+todas com um membro, 237 delas com território, zero tiles com dono
+inválido. **Isso deixou de valer:** hoje o mundo funda 4 reinos contíguos e
+reparte os 240 fundadores entre eles (ver "Por que poucos reinos contíguos"
+abaixo).
 
 ### Como a herança funciona
 
@@ -628,17 +627,17 @@ resto do jogo.
 
 **O sorteio vem do `Rng` da simulação, não de um `Random` próprio.** É a
 mesma regra que vale para o terreno e para a espécie: a semente do mundo
-decide tudo. O mundo da semente 12345 funda Garmar, Velstad, Ashfell,
-Nymran… nessa ordem, toda vez, em qualquer aparelho; o da semente 2026
-funda Tovrok, Dunrok, Varmar, Duneth. Um único `nextLong()` por facção
+decide tudo. O mundo da semente 12345 funda Dundor, Aelrok, Dunholm e
+Breholm, nessa ordem, toda vez, em qualquer aparelho; o da semente 2026
+funda Garvik, Tyrdor, Ashrok e Ornnen. Um único `nextLong()` por facção
 alimenta nome e tom — um sorteio em vez de três, para mexer o mínimo
 possível na sequência que o resto da simulação consome.
 
 Os nomes saem de duas tabelas de sílabas inventadas (24 cabeças × 16
 caudas = 384 combinações), lidas de faixas de bits diferentes do mesmo
-sorteio. Com 240 fundadores há repetição, e tudo bem: dois reinos de uma
-criatura cada com o mesmo nome incomodam menos que "Reino 37". Unicidade
-entra quando facção virar entidade de verdade. As sílabas não remetem a
+sorteio. Com 4 reinos a repetição é rara, e mesmo quando acontece incomoda
+menos que "Reino 37". Unicidade entra quando facção virar entidade de
+verdade. As sílabas não remetem a
 nenhum povo real pela mesma razão que as espécies se chamam ALPHA e BETA —
 batizar de "Reino Élfico" prometeria cultura e diplomacia que o código não
 tem.
@@ -664,9 +663,9 @@ O que este esquema **não** garante, e vale dizer: a separação é no espaço
 de ids, não no mapa. Duas facções vizinhas *no terreno* podem ter ids
 distantes e, com azar, cores parecidas. Resolver isso exigiria olhar o
 território para escolher a cor — e o território é recalculado a cada
-segundo, então a cor mudaria junto, o que é pior que o problema. Com 240
-facções também não existem 240 cores que um olho humano separe; o objetivo
-é reino distinguível do vizinho na maioria dos casos, não paleta perfeita.
+segundo, então a cor mudaria junto, o que é pior que o problema. O
+objetivo é reino distinguível do vizinho na maioria dos casos, não paleta
+perfeita.
 
 **Ninguém desenha isso ainda.** `nameOf` e `colorOf` hoje só são chamados
 pelos testes — a tela de território não existe, e `CreatureRenderer`
@@ -681,7 +680,7 @@ página.
 
 ## Ferramentas de apoio
 
-Duas ferramentas em Java puro, sem Gradle e sem baixar dependência:
+Quatro ferramentas em Java puro, sem Gradle e sem baixar dependência:
 
 ```bash
 # compile a simulação uma vez
@@ -691,6 +690,9 @@ javac -d build/tools -cp build/sim tools/*.java
 # gere um PNG do mundo da semente 12345, com 3 px por tile
 java -cp build/sim:build/tools WorldPreview 12345 3 previa.png
 
+# o mesmo mundo com as criaturas, depois de 2 minutos simulados
+java -cp build/sim:build/tools SimulationPreview 12345 2 3 vivo.png
+
 # acompanhe a população por 5 minutos simulados
 java -cp build/sim:build/tools SimulationReport 12345 5
 
@@ -699,7 +701,8 @@ java -cp build/sim:build/tools SimSelfTest
 ```
 
 `WorldPreview` encurta o ciclo de calibragem de minutos para segundos:
-mexeu em `WorldConfig`, roda e olha o PNG. `SimulationReport` faz o mesmo
+mexeu em `WorldConfig`, roda e olha o PNG. `SimulationPreview` desenha as
+criaturas por cima, com a mesma cor de estado do jogo. `SimulationReport` faz o mesmo
 para `CreatureConfig`: mostra a população, os nascimentos, as mortes por
 fome e por velhice e o custo por passo ao longo do tempo — foi com ele que
 o ciclo de explosão e colapso apareceu. `SimSelfTest` cobre as mesmas
@@ -768,38 +771,33 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   rendem mordidas maiores — mas é variação, não diferença entre viver e
   morrer. Os números caíram para cerca de um terço do que eram sem
   combate (532/479/458): é a fronteira cobrando, não uma regressão.
-- Custo de um passo: 0,064 ms com 403 criaturas e 0,090 ms com o pool
-  cheio (3000), em um quadro que tem 16,6 ms. A simulação não é o gargalo.
+- Custo de um passo, **remedido com o combate ligado**: 0,165 ms com 288
+  criaturas e **8,9 ms com o pool cheio** (2.999), em um quadro que tem
+  16,6 ms. Em jogo normal a simulação não é o gargalo; com o pool cheio, a
+  busca de inimigos (quadrática) passa a pesar — ver a dívida técnica. O
+  valor antigo de 0,090 ms com o pool cheio era de antes do combate.
 - Custo de um recálculo de território, que roda uma vez por segundo: 0,284
   ms com 403 criaturas e 0,264 ms com 3000, em um mundo padrão de 49 mil
   tiles — bem abaixo do segundo inteiro de folga que o intervalo dá. O custo
   quase não depende da população porque a busca é multi-fonte: ela varre os
   tiles uma vez, não uma vez por criatura.
+- **O build do Gradle roda na CI** (GitHub Actions) a cada envio para a
+  `main` e em todo pull request: compila `core` (incluindo `render/`) e
+  `android` contra o libGDX real, roda a suíte JUnit (109 métodos `@Test`)
+  com `./gradlew core:test` e gera o APK de depuração. O módulo `desktop`
+  não é compilado na CI.
+- **O APK já abriu num celular Android**, com o mapa e as criaturas na
+  tela (relato do dono do projeto, com capturas de tela).
 
-**Não verificado:**
+**Ainda não verificado:**
 
-- O build do Gradle nunca rodou, nem o do Android. O ambiente onde este
-  projeto foi montado não tem acesso ao Maven Central nem ao repositório do
-  Google, então nem o libGDX nem o plugin do Android puderam ser baixados.
-- A camada `render/` compilou contra *stubs* da API do libGDX escritos à
-  mão, não contra o libGDX real. Isso pega erro de sintaxe, import faltando
-  e método de interface não implementado — mas **não** garante que as
-  assinaturas batem com as do libGDX 1.14.2. Duas exceções agora têm
-  teste de verdade rodando no CI: `TileMapping`, que não importa libGDX
-  nenhum, e `CameraController`, cujo teste cobre toque, arraste e pinça
-  sem tocar em matriz — a multiplicação de matriz do libGDX é nativa e
-  não carrega em teste sem backend, então `resize()` fica de fora.
-- O jogo nunca foi executado. Não há medição de FPS real, nem confirmação
-  de que o `flipY` da textura deixa o mapa na orientação certa na tela — e
-  a mesma dúvida vale para a posição das criaturas, que usam a mesma
-  inversão de eixo.
-- A suíte JUnit nunca rodou (JUnit não pôde ser baixado). O que rodou foi o
-  `SimSelfTest`, que cobre as mesmas invariantes em Java puro.
-
-Tradução prática: a simulação inteira está testada e funcionando; a camada
-gráfica está escrita com cuidado mas não foi provada. O primeiro
-`./gradlew desktop:run` é o teste que falta, e é onde eventual divergência
-de assinatura vai aparecer.
+- Não há medição de FPS real, nem no celular nem no PC.
+- `./gradlew desktop:run` não tem registro de execução.
+- A orientação do mapa na tela não foi comparada com a do `WorldPreview`
+  para a mesma semente. Os testes provam que desenho e toque concordam
+  entre si, não que o mapa aparece do lado certo.
+- `CameraController.resize()` não tem teste: a multiplicação de matriz do
+  libGDX é nativa e não carrega em teste sem backend.
 
 ---
 
@@ -846,12 +844,26 @@ Registrada de propósito, para não virar surpresa:
   guerra ou fronteiras fechadas entrarem, pode valer a pena decidir se um
   casal assim deveria sequer poder reproduzir.
 - ~~**O mundo nasce com 240 facções, uma por fundador.**~~ Resolvido: o
-  mundo funda cinco reinos contíguos e reparte os fundadores entre eles.
+  mundo funda quatro reinos contíguos e reparte os fundadores entre eles.
   A previsão que estava escrita aqui — "provavelmente vai fazer mais
   sentido fundar poucas e grandes do que uma por indivíduo" — se
   confirmou, e pelo motivo mais caro possível: foi o que impediu o
   combate corpo a corpo de funcionar. Ver "Por que poucos reinos
   contíguos" acima.
+- **Reproduzir com uma criatura sem reino quebra o jogo.** Em
+  `Simulation.reproduce`, o filho herda a facção de um dos pais e entra
+  nela com `factions.join(childFaction)`. Se esse pai tiver facção `-1`,
+  `FactionRegistry.join(-1)` lança `IndexOutOfBoundsException`. Hoje não
+  acontece — todo fundador recebe reino e todo filho herda um válido —, mas
+  vai acontecer no dia em que algo criar criatura sem reino (um poder de
+  criar criatura, por exemplo).
+- **A busca de inimigos é quadrática.** `Simulation.hostileNeighbours`
+  compara cada criatura com todas as outras vivas. Com 288 criaturas o
+  passo custa 0,165 ms; com o pool cheio (2.999), 8,9 ms, mais da metade
+  do quadro. A correção é a mesma grade espacial da busca por parceiro.
+- **`Creature.size` não tem consumidor.** O genoma calcula o tamanho, como
+  os outros traços, mas nada o lê. O uso natural é no combate ou na
+  comida.
 - **Nome e cor de facção não são desenhados em lugar nenhum.**
   `FactionRegistry.nameOf` e `colorOf` existem, são determinísticos e têm
   teste, mas quem chama hoje são só os testes. O consumidor natural é um
@@ -880,19 +892,18 @@ Registrada de propósito, para não virar surpresa:
 
 ## Próximo passo
 
-**Antes de qualquer código novo: rodar `./gradlew desktop:run`.** É a única
-parte do projeto que nunca foi provada, e continuar empilhando sistemas
-sobre uma camada gráfica não verificada só aumenta o tamanho do estrago se
-algo lá estiver errado. Isso ainda vale depois do sistema 4: facções e
-território são só `sim/`, não tocaram em `render/`, e essa dívida não foi
-paga por eles.
+**Primeiro: olhar o jogo na tela com atenção.** O APK já abriu num
+celular, mas ninguém mediu FPS nem comparou a orientação do mapa com o
+`WorldPreview` da mesma semente. Rodar `./gradlew desktop:run` no PC
+resolve as duas coisas de uma vez.
 
-Depois disso, sistema 5: save/load. `World`, `FoodMap`, `CreaturePool` e
-agora `FactionRegistry`/`Territory` guardam estado simples o bastante para
+Depois, sistema 5: save/load. `World`, `FoodMap`, `CreaturePool` e
+`FactionRegistry`/`Territory` guardam estado simples o bastante para
 serializar; falta decidir o formato e escrever o carregamento — e conferir
 que um mundo recarregado recalcula o mesmo território que tinha antes de
 salvar, já que ele deriva da posição das criaturas em vez de ser salvo
 como tal.
 
-O sistema 7 (guerra) segue dependendo do território para ter uma fronteira
-para disputar — agora existe; falta a IA que decida atacá-la.
+Em paralelo, o que já existe e não aparece: desenhar o território com o
+nome e a cor de cada reino. O combate já usa os reinos; falta o jogador
+vê-los.

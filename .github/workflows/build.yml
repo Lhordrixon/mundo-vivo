@@ -1,11 +1,12 @@
 name: Compilar APK
 
-# Roda a cada envio pro repositório e também pode ser disparado manualmente
-# pela aba Actions do GitHub — útil para gerar um APK sem precisar mudar
-# nada no código.
+# Roda a cada envio para a main, em todo pull request e também pode ser
+# disparado manualmente pela aba Actions do GitHub — útil para gerar um APK
+# sem precisar mudar nada no código.
 on:
   push:
     branches: [main, master]
+  pull_request:
   workflow_dispatch:
 
 jobs:
