@@ -1,14 +1,20 @@
 name: Publicar APK
 
-# Roda quando alguém envia uma tag que começa com "v" (por exemplo v0.1.0).
-# Testa, compila o APK e cria uma Release com ele anexado. Releases de
+# Roda quando alguém envia uma tag que começa com "v" (por exemplo v0.1.0)
+# ou publica uma Release pela página do GitHub. Testa, compila o APK e
+# anexa-o à Release, criando-a se ainda não existir. Releases de
 # repositório público podem ser baixadas por qualquer pessoa, sem login.
 #
 #   git tag v0.1.0
 #   git push origin v0.1.0
+#
+# Ou, sem terminal: Releases → Draft a new release → escreva a tag v0.1.0
+# → Publish release.
 on:
   push:
     tags: ['v*']
+  release:
+    types: [published]
 
 permissions:
   contents: write   # necessário para criar a Release
