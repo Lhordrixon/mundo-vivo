@@ -782,9 +782,10 @@ Vale a pena ser exato aqui, para você não descobrir na hora errada.
   quase não depende da população porque a busca é multi-fonte: ela varre os
   tiles uma vez, não uma vez por criatura.
 - **O build do Gradle roda na CI** (GitHub Actions) a cada envio para a
-  `main` e em todo pull request: compila `core`, `android` e `desktop`
-  contra o libGDX real, roda a suíte JUnit (109 métodos `@Test`) com
-  `./gradlew core:test` e gera o APK de depuração.
+  `main` e em todo pull request: compila `core` (incluindo `render/`) e
+  `android` contra o libGDX real, roda a suíte JUnit (109 métodos `@Test`)
+  com `./gradlew core:test` e gera o APK de depuração. O módulo `desktop`
+  não é compilado na CI.
 - **O APK já abriu num celular Android**, com o mapa e as criaturas na
   tela (relato do dono do projeto, com capturas de tela).
 
