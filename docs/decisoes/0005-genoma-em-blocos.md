@@ -35,4 +35,36 @@ média de doze genes de quatro blocos (`Phenotype`).
   nascimento.
 - `creature` e `genetics` passaram a depender uma da outra.
 
+<details>
+<summary>O argumento completo, que antes morava no javadoc</summary>
+
+**Contra `filho = hash(pai, mãe)`.** O hash de dois pais é um valor
+descorrelacionado dos dois. Dois pais grandes gerariam um filho pequeno com
+a mesma probabilidade de qualquer outro. Sem herdabilidade, o que sobra é
+deriva aleatória com aparência de evolução, que é o pior dos mundos:
+parece que funciona.
+
+**A favor dos blocos.** O bloco chega intacto, então tudo que ele codifica
+chega junto, e a correlação pai-filho sobrevive. Genes do mesmo bloco são
+herdados juntos, que é como funciona de verdade, e não uma aproximação
+simpática.
+
+**Por que todo traço é aditivo.** Um traço de gene único é degrau: ou o
+filho herdou aquele bloco e tem o valor do pai, ou não herdou e tem o da
+mãe. A média dos pais não prevê nada, a regressão filho × pais fica em
+degraus, e a seleção só consegue mover a população aos saltos. Com doze
+genes somados, o traço vira contínuo, o filho cai perto da média dos pais,
+e uma pressão seletiva fraca consegue empurrar a distribuição aos poucos.
+
+A média de doze uniformes se concentra no meio da faixa (teorema central
+do limite): a maioria nasce mediana e os extremos são raros.
+`PopulationGeneticsTest` confere isso. O javadoc antigo citava um
+`TraitDistributionTest`, que não existe.
+
+**Por que a faixa é estreita.** O equilíbrio da população foi calibrado
+com medição, e genética não é desculpa para desregulá-lo. Uma criatura
+geneticamente veloz é 30% mais rápida que a média, não o dobro.
+
+</details>
+
 **Estado.** Em vigor desde o commit `e35143b`.

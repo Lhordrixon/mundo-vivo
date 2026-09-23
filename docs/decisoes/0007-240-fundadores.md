@@ -1,7 +1,8 @@
 # 0007 — 240 fundadores
 
 **Problema.** Separar a reprodução em duas espécies derrubou a população
-de equilíbrio em cerca de sete vezes. A cada instante, só algumas
+de equilíbrio em cerca de sete vezes: 120 fundadores viravam dois grupos
+de uns 60. A cada instante, só algumas
 criaturas estão procurando parceiro. Exigir a mesma espécie cortou esse
 grupo pela metade.
 
@@ -23,6 +24,9 @@ população inteira tinha antes.
   mortes por fome voltaram a existir: 679 e 1086 em quarenta minutos,
   contra 19 com 120 fundadores, quando a comida ficava 99% intocada. O
   mundo voltou a ser limitado por comida, pela natalidade.
+- Hoje este número não decide quantos reinos existem
+  (`CreatureConfig.initialFactions` decide). Mudar a população só muda
+  quantos habitantes cada reino recebe.
 - Na época, cada fundador fundava o próprio reino, então o número de
   reinos também dobrou, para 240. Foi conferido antes: nem
   `FactionRegistry` nem `Territory` supõem um número máximo de reinos, e as

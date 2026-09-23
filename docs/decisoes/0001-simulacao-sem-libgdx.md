@@ -19,6 +19,10 @@ escrever.
 - Algumas contas ficam escritas à mão, como a conversão de HSV em
   `FactionRegistry`.
 - A conta de tela para tile saiu do `WorldRenderer` para `TileMapping`,
-  aritmética pura, para poder ser testada.
+  aritmética pura, para poder ser testada. O `WorldRenderer` cria um
+  `Pixmap` e uma `Texture` no construtor, que exigem biblioteca nativa e
+  contexto de vídeo; enquanto a conta morava lá, nenhum teste a alcançava,
+  e a orientação do mapa ficava sem prova. `WorldRenderer.tileX` e `tileY`
+  continuam existindo e delegam para `TileMapping`.
 
 **Estado.** Em vigor. Conferível: nenhum `com.badlogic` em `sim/`.

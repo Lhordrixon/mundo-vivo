@@ -60,4 +60,44 @@ Essas medições são de antes da genética. Os números atuais estão em
 
 </details>
 
+<details>
+<summary>A trégua do cortejo: o que ela resolveu e o que não resolveu</summary>
+
+Quem está procurando parceiro não briga, dos dois lados
+(`Simulation.hostileNeighbours`). A busca por parceiro filtra por espécie e
+nunca por facção. Com um reino por fundador, o cortejo aproximava de
+propósito duas criaturas quase sempre de reinos diferentes, e toda
+tentativa de acasalamento virava duelo.
+
+A trégua ajudou e não bastou. Em seis sementes a vinte minutos, ela levou
+os nascimentos de 277 para 384, contra 15.864 sem combate nenhum, e as
+seis sementes continuaram se extinguindo. Cortejar ocupa só 9,4% do tempo
+de uma criatura. Nos outros 90,6% (79,5% vagando, 4,9% procurando comida,
+6,2% comendo) ela ficava exposta, e com os reinos espalhados o simples
+vaguear já era letal: a população caía de 240 para 6 em quatro minutos
+simulados.
+
+O duelo do cortejo era parte do problema, não o problema. A causa de raiz
+era a fundação, e é ela que esta decisão corrige. A trégua continua valendo.
+
+</details>
+
+<details>
+<summary>Por que o melhor candidato de Mitchell, e linha reta</summary>
+
+É barato, determinístico e não precisa de repulsão iterativa: com um
+punhado de candidatos por centro, já espalha bem melhor que sorteio puro,
+e não cria o viés de grade que dividir o mapa em fatias criaria.
+
+A distância em linha reta basta porque é só a semente: o território de
+verdade é recalculado pela busca em largura, que respeita o terreno, e a
+população se redistribui andando. Usar a busca em largura na fundação
+custaria uma varredura do mundo por centro, para acertar um detalhe do
+instante zero.
+
+Poucos reinos grandes deixam o mapa sem fronteiras interessantes; muitos
+reinos pequenos recriam o problema dos 240.
+
+</details>
+
 **Estado.** Em vigor desde o commit `589df6a`.

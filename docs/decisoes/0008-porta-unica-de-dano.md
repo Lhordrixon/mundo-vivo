@@ -26,4 +26,18 @@ volta ao pool.
   Em jogo normal nunca dispara, porque ninguém entra andando na água. Ele
   existe para quando o chão mudar debaixo de alguém.
 
+<details>
+<summary>O argumento completo, que antes morava no javadoc</summary>
+
+A criatura não sabe o que a feriu: só registra a causa, para quem conta a
+morte poder separar quem morreu de quê. Morrer envolve virar comida no
+tile, sair da facção e devolver o slot ao pool, e nada disso mora em
+`Creature`: o pacote `creature` não conhece mundo, comida nem facção, e
+essa separação é o que deixa a criatura testável sozinha.
+
+As constantes `CAUSE_*` existem para que um erro de digitação não vire
+estatística errada.
+
+</details>
+
 **Estado.** Em vigor desde o commit `15dd0f8`.
