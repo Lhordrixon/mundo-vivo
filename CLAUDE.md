@@ -49,8 +49,8 @@ Cada um foi conferido no código. Não quebre sem discutir antes.
   sementes, feita com `tools/SimulationReport.java`. Registre os números.
 - Toda entrega atualiza o [roadmap](docs/roadmap.md): estado do item,
   evidência com arquivo e linha, e uma linha no histórico.
-- Mecanismo sem consumidor na tela vai para a dívida técnica
-  ([docs/tecnico.md](docs/tecnico.md#dívida-técnica-conhecida)).
+- Mecanismo sem consumidor na tela vai para a
+  [dívida técnica](docs/divida-tecnica.md).
 - Números de progresso só no roadmap.
 - Refatoração estrutural (dividir `Simulation`, criar pacotes, quebrar o
   ciclo) só com aprovação do dono do projeto.
@@ -65,7 +65,7 @@ Cada um foi conferido no código. Não quebre sem discutir antes.
 
 Sem Gradle, só com o JDK: compile `sim/` e `tools/` com `javac` e rode
 `SimSelfTest`, `WorldPreview`, `SimulationPreview` ou `SimulationReport`
-(passo a passo em [docs/tecnico.md](docs/tecnico.md#ferramentas-de-apoio)).
+(passo a passo em [docs/verificacao.md](docs/verificacao.md)).
 
 ## Antes de criar algo novo, procure em
 
@@ -74,3 +74,5 @@ Sem Gradle, só com o JDK: compile `sim/` e `tools/` com `javac` e rode
 - `FactionRegistry.nameOf` / `colorOf`, `Territory`, `World.setTile`,
   `FoodMap.retile`: prontos e sem consumidor na tela.
 - O [roadmap](docs/roadmap.md): o item pode já ter evidência parcial.
+- As [decisões](docs/decisoes/README.md) e a
+  [arquitetura](docs/arquitetura.md): o porquê de cada escolha grande.

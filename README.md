@@ -95,8 +95,16 @@ de `Simulation.java`.
 
 - **Começar do zero:** [COMECE-AQUI.md](COMECE-AQUI.md)
 - **Enviar uma mudança:** [CONTRIBUTING.md](CONTRIBUTING.md)
-- **O que existe e o que falta:** [docs/roadmap.md](docs/roadmap.md)
-- **Referência técnica completa:** [docs/tecnico.md](docs/tecnico.md)
+- **Como as peças se encaixam:** [arquitetura](docs/arquitetura.md) e
+  [decisões](docs/decisoes/README.md)
+- **Cada domínio:** 🌍 [mundo](docs/dominios/mundo.md) ·
+  🌱 [ecologia](docs/dominios/ecologia.md) ·
+  🐾 [criaturas, combate e jogador](docs/dominios/criaturas.md) ·
+  🧬 [genética](docs/dominios/genetica.md) ·
+  👑 [facções](docs/dominios/faccoes.md)
+- 🧪 **Testes, ferramentas e números:** [verificação](docs/verificacao.md)
+- **O que está pendente:** [dívida técnica](docs/divida-tecnica.md)
+- **O que existe e o que falta:** [roadmap](docs/roadmap.md)
 
 ---
 

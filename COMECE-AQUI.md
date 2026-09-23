@@ -164,9 +164,9 @@ Procure as issues com o rótulo
 [good first issue](https://github.com/Lhordrixon/mundo-vivo/labels/good%20first%20issue).
 São tarefas pequenas, pensadas para quem está começando.
 
-Se não houver nenhuma, escolha um item da
-[dívida técnica](docs/tecnico.md#dívida-técnica-conhecida). Abra uma issue
-dizendo que vai fazê-lo, e espere uma resposta antes de começar.
+Se não houver nenhuma, escolha um item marcado como **bom para começar**
+na [dívida técnica](docs/divida-tecnica.md). Abra uma issue dizendo que vai
+fazê-lo, e espere uma resposta antes de começar.
 
 ### 10. Criar uma branch
 
