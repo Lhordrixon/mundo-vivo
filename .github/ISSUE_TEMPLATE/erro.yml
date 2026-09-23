@@ -1,0 +1,41 @@
+name: 🐛 Algo deu errado
+description: Um comando falhou, o jogo quebrou ou a tela ficou estranha.
+title: "Erro: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por relatar! Um erro bem descrito ajuda tanto quanto um código novo.
+  - type: textarea
+    id: fazendo
+    attributes:
+      label: O que você estava fazendo?
+      description: O passo do COMECE-AQUI, o comando que rodou ou o que fez no jogo.
+      placeholder: "Passo 8: rodei ./gradlew desktop:run"
+    validations:
+      required: true
+  - type: textarea
+    id: erro
+    attributes:
+      label: Cole o erro aqui
+      description: A mensagem inteira, do jeito que apareceu. Se foi algo na tela, arraste uma captura de tela para cá.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Qual sistema?
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Android
+    validations:
+      required: true
+  - type: input
+    id: java
+    attributes:
+      label: O que aparece com `java -version`?
+      placeholder: openjdk version "17.0.12"

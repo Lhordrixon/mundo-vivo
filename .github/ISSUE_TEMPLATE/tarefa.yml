@@ -1,0 +1,30 @@
+name: 🛠️ Proposta de tarefa
+description: Algo a fazer no jogo, nos testes ou na documentação.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: oque
+    attributes:
+      label: O que deve mudar?
+      description: Uma ou duas frases.
+    validations:
+      required: true
+  - type: textarea
+    id: porque
+    attributes:
+      label: Por que isso importa?
+    validations:
+      required: true
+  - type: textarea
+    id: pronto
+    attributes:
+      label: Como saber que ficou pronto?
+      description: O que dá para conferir no fim. Um teste passando, algo na tela, um número.
+    validations:
+      required: true
+  - type: checkboxes
+    id: eu
+    attributes:
+      label: Quem faz?
+      options:
+        - label: Eu quero fazer esta tarefa
