@@ -179,25 +179,9 @@ public final class Creature {
     /**
      * Tira vida da criatura, por qualquer motivo.
      *
-     * <p>É a única porta de entrada de dano do jogo: fome entra por aqui,
-     * terreno perigoso entra por aqui, e combate e desastre vão entrar por
-     * aqui sem que nada precise ser reescrito. A criatura não sabe o que a
-     * feriu — só registra a causa, para quem contabiliza a morte poder
-     * separar quem morreu de quê.
-     *
-     * <p><b>Ela não mata ninguém.</b> Morrer envolve virar comida no tile,
-     * sair da facção e devolver o slot ao pool, e nada disso mora aqui: o
-     * pacote {@code creature} não conhece mundo, comida nem facção, e essa
-     * separação é o que deixa a criatura testável sozinha. O que este
-     * método faz é avisar, pelo retorno, que o golpe foi fatal; quem trata
-     * a morte é {@code Simulation}, no mesmo ponto onde já tratava a morte
-     * por fome. Um só lugar mata — não há caminho de morte duplicado.
-     *
-     * <p>A causa é uma {@code String} livre em vez de um enum fechado
-     * porque combate vai querer dizer de quem levou a pancada, não só que
-     * levou. Para as causas que a própria simulação usa existem constantes
-     * aqui do lado, que é o que evita erro de digitação virar estatística
-     * errada.
+     * <p>É a única porta de entrada de dano do jogo. Não mata: só avisa,
+     * pelo retorno, que o golpe foi fatal; quem trata a morte é
+     * {@code Simulation}. Por quê: docs/decisoes/0008-porta-unica-de-dano.md.
      *
      * @param amount quanto de vida tirar, em [0,1]; valores &le; 0 são
      *               ignorados, para um dano de zero não apagar a causa da

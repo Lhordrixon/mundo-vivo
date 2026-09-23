@@ -10,26 +10,10 @@ import com.emannuel.mundovivo.sim.creature.CreatureConfig;
  * campos primitivos da criatura, e nunca mais é consultada — o custo por
  * quadro é zero.
  *
- * <p><b>Todo traço é aditivo, e isso não é detalhe.</b> Cada um é a média
- * de doze genes espalhados por quatro blocos, nunca um gene só. A razão é
- * que um traço de gene único é degrau: ou o filho herdou aquele bloco e
- * tem o valor do pai, ou não herdou e tem o da mãe. A média dos pais não
- * prevê nada, a regressão filho × pais fica em degraus, e a seleção só
- * consegue mover a população aos saltos. Com doze genes somados, o traço
- * vira contínuo, o filho cai perto da média dos pais, e pressão seletiva
- * fraca consegue empurrar a distribuição aos poucos — que é como a seleção
- * natural funciona.
- *
- * <p>Some-se a isso o teorema central do limite: a média de doze uniformes
- * se concentra no meio da faixa, então a maioria das criaturas nasce
- * mediana e os extremos são raros. É o formato certo para uma população,
- * e é o que {@code TraitDistributionTest} confere.
- *
- * <p><b>Os traços multiplicam a base de {@link CreatureConfig}, não a
- * substituem.</b> A faixa é estreita de propósito — {@value #MIN_FATOR}× a
- * {@value #MAX_FATOR}× — porque o equilíbrio populacional deste jogo foi
- * calibrado com medição, e genética não é desculpa para desregulá-lo. Uma
- * criatura geneticamente veloz é 30% mais rápida que a média, não o dobro.
+ * <p>Cada traço é a média de doze genes de quatro blocos, e multiplica a
+ * base de {@link CreatureConfig} numa faixa estreita ({@value #MIN_FATOR}× a
+ * {@value #MAX_FATOR}×) para não desregular a população calibrada. Por quê:
+ * docs/decisoes/0005-genoma-em-blocos.md.
  */
 public final class Phenotype {
 

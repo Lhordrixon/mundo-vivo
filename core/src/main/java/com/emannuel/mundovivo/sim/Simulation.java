@@ -467,34 +467,14 @@ public final class Simulation {
      * todas. Tratá-lo como inimigo faria uma criatura recém-nascida ser
      * hostil ao mundo inteiro por um instante.
      *
-     * <p><b>Quem está procurando parceiro não briga, dos dois lados.</b>
-     * {@link #resolveMate} filtra por espécie e nunca por facção, então o
-     * cortejo aproxima de propósito duas criaturas que, com uma facção por
-     * fundador, quase sempre são de facções diferentes — sem a trégua,
-     * toda tentativa de acasalamento vira um duelo.
+     * <p>Quem está procurando parceiro não briga, dos dois lados: a busca
+     * por parceiro filtra por espécie e não por facção, e sem essa trégua
+     * todo cortejo entre reinos viraria duelo. A medição da trégua está em
+     * docs/decisoes/0006-poucos-reinos-contiguos.md.
      *
-     * <p><b>A trégua ajuda e não basta, e isso está medido.</b> Em seis
-     * sementes a vinte minutos, ela levou os nascimentos de 277 para 384 —
-     * contra 15.864 sem combate nenhum — e as seis sementes continuam
-     * extinguindo. O motivo é que cortejar ocupa só 9,4% do tempo de uma
-     * criatura; nos outros 90,6% (79,5% vagando, 4,9% procurando comida,
-     * 6,2% comendo) ela está exposta, e com as facções salpicadas pelo mapa
-     * o simples vaguear já é letal: a população cai de 240 para 6 em quatro
-     * minutos simulados.
-     *
-     * <p>Ou seja, o duelo de acasalamento era parte do problema, não o
-     * problema. A causa de raiz é o mundo nascer com uma facção por
-     * fundador, todas salpicadas — dívida técnica já anotada no README, e
-     * o que o sistema de sociedade vai endereçar. Enquanto isso, combate
-     * não é habilitável no mundo gerado, e esta trégua é a parte da
-     * correção que já está de pé.
-     *
-     * <p>Compara distância ao quadrado para não tirar raiz: diferente de
-     * {@link #resolveMate}, que só roda para quem está procurando
-     * parceiro, esta varredura roda para <b>toda</b> criatura em
-     * <b>todo</b> passo, e é a parte mais cara da simulação hoje. A
-     * correção, quando doer, é a mesma já anotada como dívida técnica para
-     * a busca por parceiro: indexar as criaturas em uma grade espacial.
+     * <p>Compara distância ao quadrado para não tirar raiz: esta varredura
+     * roda para toda criatura em todo passo e é quadrática. Está na
+     * docs/divida-tecnica.md.
      */
     private int hostileNeighbours(Creature c) {
         if (c.factionId < 0 || c.state == CreatureState.SEEKING_MATE) {
@@ -759,29 +739,11 @@ public final class Simulation {
     /**
      * Escolhe onde ficam as capitais dos reinos e funda as facções.
      *
-     * <p><b>Por que existe.</b> Até aqui cada fundador fundava a própria
-     * facção, em posição aleatória: 240 reinos de um membro, salpicados. O
-     * efeito medido é que ninguém tem compatriota por perto — território
-     * vira retalho sem significado, e qualquer regra que dependa de "meu
-     * povo contra o seu" não tem de onde se agarrar.
-     *
-     * <p><b>O método.</b> Para cada centro, sorteia
-     * {@value #CENTRE_CANDIDATES} tiles caminháveis e fica com o que
-     * estiver mais longe dos centros já escolhidos — a heurística do
-     * melhor candidato de Mitchell. Serve porque é barata, determinística e
-     * não precisa de repulsão iterativa: com um punhado de candidatos por
-     * centro, já espalha bem melhor que sorteio puro, e não cria o viés de
-     * grade que dividir o mapa em fatias criaria.
-     *
-     * <p><b>E a fronteira.</b> Cada fundador entra na facção do centro mais
-     * próximo, então as regiões saem contíguas de graça: são as células de
-     * Voronoi dos centros. A distância aqui é em linha reta, não por tiles
-     * caminháveis como em {@link Territory} — um fundador do outro lado de
-     * uma baía pode acabar num reino que ele não alcança a pé. Isso é
-     * aceitável porque é só a semente: o território de verdade é recalculado
-     * pelo BFS, que respeita o terreno, e a população se redistribui
-     * andando. Usar BFS aqui custaria uma varredura do mundo por centro,
-     * para acertar um detalhe do instante zero.
+     * <p>Para cada centro, sorteia {@value #CENTRE_CANDIDATES} tiles
+     * caminháveis e fica com o mais longe dos já escolhidos (melhor
+     * candidato de Mitchell). Cada fundador entra no reino do centro mais
+     * próximo em linha reta, o que dá regiões contíguas (Voronoi). Por quê:
+     * docs/decisoes/0006-poucos-reinos-contiguos.md.
      *
      * @return quantos centros foram realmente colocados
      */

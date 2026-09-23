@@ -51,35 +51,18 @@ public final class CreatureConfig {
     /**
      * Quantas criaturas nascem junto com o mundo.
      *
-     * <p>Eram 120 até as espécies entrarem. Com o acasalamento restrito a
-     * pares da mesma espécie, 120 fundadores viravam dois grupos de ~60 e a
-     * população desabava — medido, média 63 contra ~470 de antes, com
-     * sementes chegando a um punhado de sobreviventes. Dobrar os fundadores
-     * é o que devolve a densidade de cada espécie ao que era a densidade
-     * total: com 240, a média a 60 quadros volta para 479.
-     *
-     * <p>Este número já foi acoplado à contagem de facções: cada fundador
-     * fundava a própria, e dobrá-lo dobrava os reinos. Não é mais — quem
-     * decide quantos reinos existem é {@link #initialFactions}, e mudar a
-     * população só muda quantos habitantes cada reino recebe.
+     * <p>240, e não 120, para cada espécie ter densidade para achar
+     * parceiro: docs/decisoes/0007-240-fundadores.md. Não decide quantos
+     * reinos existem; isso é {@link #initialFactions}.
      */
     public int initialPopulation = 240;
 
     /**
      * Quantas facções o mundo funda, e portanto quantos reinos existem.
      *
-     * <p>Eram 240 — uma por fundador — até ficar medido que isso não
-     * sustenta nada. Com uma facção por indivíduo, todo vizinho é
-     * estrangeiro: não há "dentro do reino", só 240 pontos isolados que se
-     * ignoram (ou, quando existe combate, se matam). Agora os fundadores
-     * são repartidos entre poucos reinos contíguos, e a maior parte dos
-     * vizinhos de alguém é da mesma facção — que é o que faz território
-     * significar alguma coisa.
-     *
-     * <p>O número foi escolhido por medição, não por gosto: ver a tabela
-     * de varredura no README. Poucos reinos grandes deixam o mapa sem
-     * fronteiras interessantes; muitos reinos pequenos recriam o problema
-     * dos 240.
+     * <p>Poucos reinos contíguos, e não um por fundador, para o vizinho de
+     * alguém ser quase sempre do mesmo reino. Por quê, e a medição que
+     * escolheu 4: docs/decisoes/0006-poucos-reinos-contiguos.md.
      *
      * <p>Pedir mais reinos que fundadores não é erro: funda-se quantos
      * couberem. Um mundo de uma criatura tem um reino.
