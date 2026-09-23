@@ -84,8 +84,8 @@ Pull request pequeno é revisado mais rápido. Na dúvida, divida.
 - **Toda entrega atualiza o [roadmap](docs/roadmap.md).** O item muda de
   estado, com a evidência de arquivo e linha, e ganha uma linha no
   histórico.
-- **Código pronto que nada usa vai para a dívida técnica.** Assim ele não
-  some da vista.
+- **Código pronto que nada usa vai para a
+  [dívida técnica](docs/divida-tecnica.md).** Assim ele não some da vista.
 
 A lista completa, com o arquivo onde cada regra é verificável, está no
 [CLAUDE.md](CLAUDE.md).

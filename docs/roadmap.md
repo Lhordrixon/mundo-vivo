@@ -32,7 +32,7 @@ separar ocorrência real de falso positivo — "war" aparece dentro de
 **O que entra na lista.** Funcionalidade que o jogador faz ou vê. Decisões
 internas de engenharia (pool de objetos, alocação, nomes de classe) não
 entram, mesmo quando são boas decisões. Elas estão em
-[`docs/`](.).
+[decisões](decisoes/README.md).
 
 ---
 
