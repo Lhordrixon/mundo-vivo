@@ -8,7 +8,80 @@ Cada passo diz o que digitar e o que deve aparecer na tela.
 > inteira e [abra uma issue](https://github.com/Lhordrixon/mundo-vivo/issues/new/choose)
 > com ela. Um erro relatado ajuda o projeto tanto quanto um código novo.
 
-## Qual é o caminho inteiro?
+## Só tenho celular: como contribuo?
+
+Dá para fazer tudo pelo celular. O código roda num computador do GitHub,
+o **Codespaces**, que você abre pelo navegador.
+
+### A. Instalar o jogo
+
+Abra a página de [Releases](https://github.com/Lhordrixon/mundo-vivo/releases)
+no celular e toque em **mundo-vivo.apk**. Abra o arquivo baixado e permita
+a instalação quando o Android pedir.
+
+Deu certo quando o ícone do Mundo Vivo aparece e o jogo abre com um mapa
+colorido.
+
+### B. Acompanhar as tarefas
+
+Instale o app **GitHub** pela Play Store e entre na sua conta. As tarefas
+atribuídas a você aparecem em **Issues**. É por lá que você comenta,
+pergunta e recebe avisos.
+
+### C. Abrir o Codespaces
+
+1. No **Chrome**, abra a [página do projeto](https://github.com/Lhordrixon/mundo-vivo).
+2. No menu **⋮**, marque **Site para computador**. Sem isso, o editor não
+   abre direito.
+3. Toque em **Code** → **Codespaces** → **Create codespace on main**.
+
+Na primeira vez, o Codespaces instala o JDK 17 e o SDK do Android. Leva
+alguns minutos. No terminal, no fim, deve aparecer:
+
+```
+Pronto. Teste com: ./gradlew core:test
+```
+
+### D. Mudar, testar e enviar
+
+No terminal do Codespaces (parte de baixo da tela), crie uma branch com o
+nome da sua tarefa:
+
+```bash
+git switch -c docs/corrige-exemplo-do-contributing
+```
+
+Edite o arquivo no editor. Depois, rode os testes:
+
+```bash
+./gradlew core:test
+```
+
+No fim deve aparecer `BUILD SUCCESSFUL`. Então salve e envie:
+
+```bash
+git add .
+git commit -m "Corrige o exemplo de commit no CONTRIBUTING"
+git push -u origin docs/corrige-exemplo-do-contributing
+```
+
+Abra o link que o `git push` mostra e crie o pull request, como no
+[passo 14](#14-abrir-o-pull-request).
+
+### E. Deixar a CI testar
+
+A **CI** é um robô do GitHub. A cada pull request, ele roda os testes e
+gera um APK novo. Se ficar verde, está tudo certo. Se ficar vermelho,
+toque em **Details** para ver o erro, ou pergunte num comentário do
+próprio pull request.
+
+> [!NOTE]
+> O Codespaces tem horas grátis por mês. Quando terminar, feche a aba: ele
+> para sozinho depois de um tempo sem uso.
+
+---
+
+## Com computador: qual é o caminho inteiro?
 
 1. Instalar o Git
 2. Instalar o JDK 17
