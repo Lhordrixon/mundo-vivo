@@ -1,0 +1,20 @@
+{
+  // Ambiente do GitHub Codespaces: JDK 17 e o SDK do Android, que o Gradle
+  // exige até para rodar ./gradlew core:test (o build da raiz carrega o
+  // plugin do Android para todos os módulos).
+  "name": "Mundo Vivo",
+  "image": "mcr.microsoft.com/devcontainers/java:17-bookworm",
+  "containerEnv": {
+    "ANDROID_HOME": "/home/vscode/android-sdk",
+    "ANDROID_SDK_ROOT": "/home/vscode/android-sdk"
+  },
+  "postCreateCommand": "bash .devcontainer/instalar-sdk-android.sh",
+  "hostRequirements": {
+    "memory": "4gb"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack"]
+    }
+  }
+}
