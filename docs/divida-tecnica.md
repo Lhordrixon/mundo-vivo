@@ -22,6 +22,8 @@ Se um dos pais não tiver reino (`factionId == -1`), o filho pode herdar o
 `-1`. Aí `FactionRegistry.join(-1)` lança `IndexOutOfBoundsException`.
 
 - **Onde:** `Simulation.reproduce`, na linha `factions.join(childFaction)`.
+  A morte tem o mesmo problema: `Simulation.die` chama
+  `factions.leave(c.factionId)`, e `leave(-1)` também lança a exceção.
 - **Quando acontece:** ainda não, em jogo normal. Todo fundador recebe
   reino, e todo filho herda um válido.
 - **Quando vai acontecer:** no dia em que algo criar uma criatura sem
