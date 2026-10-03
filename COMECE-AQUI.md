@@ -140,7 +140,7 @@ Para conferir:
 java -version
 ```
 
-Deve aparecer uma versão **17 ou maior**:
+Deve aparecer a versão **17** (até a 24 funciona; a 25 ainda não):
 
 ```
 openjdk version "17.0.12" ...

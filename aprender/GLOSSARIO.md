@@ -94,6 +94,58 @@ O guia de estilo do Python: nomes em `snake_case`, espaços, linhas curtas. As a
 
 Dois jeitos de escrever nomes de várias palavras. Python usa `move_toward`; Java usa `moveToward`.
 
+## Java e testes
+
+### package e import
+
+`package` diz em que pasta a classe mora. `import` traz uma classe de outra pasta para usar.
+
+### exceção
+
+Um erro que para o programa, com nome: `IndexOutOfBoundsException` quer dizer "posição que não existe".
+
+### teste
+
+Código que confere outro código. Roda sozinho e diz `PASSED` ou `FAILED`.
+
+### JUnit
+
+A ferramenta de testes do Java. `@Test` marca um método como teste; `@DisplayName` dá o nome em português.
+
+### assertEquals e assertTrue
+
+`assertEquals(esperado, real)` confere se os dois são iguais. `assertTrue(x)` confere se `x` é verdadeiro.
+
+### tolerância
+
+A diferença minúscula que o teste aceita com número quebrado: o `1e-6f` no fim do `assertEquals`.
+
+### vermelho e verde
+
+Primeiro um teste que falha (vermelho) e mostra o problema; depois o menor conserto que faz ele passar (verde).
+
+### invariante
+
+Uma regra do projeto que vale sempre. Estão no `CLAUDE.md`.
+
+## PC
+
+### JDK
+
+O kit que compila e roda Java. O projeto usa a versão 17.
+
+### SDK
+
+As ferramentas do Android. Vêm com o Android Studio.
+
+### gradlew
+
+O comando que monta, testa e roda o projeto: `./gradlew core:test`.
+
+### Git Bash
+
+O terminal que vem com o Git no Windows. Os comandos das aulas rodam nele.
+
 ## O jogo
 
 ### tile
@@ -108,9 +160,29 @@ O número que decide todos os sorteios. A mesma semente dá sempre o mesmo mundo
 
 O que a criatura está fazendo agora: vagando, procurando comida, comendo, procurando par.
 
+### reino e território
+
+Reino é o grupo de uma criatura (no código, facção: `factionId`). Território é o pedaço do mapa de cada reino.
+
+### genoma e fenótipo
+
+Genoma: os genes que a criatura herda dos pais. Fenótipo: o que eles viram no corpo, como o tamanho.
+
+### render
+
+A parte do código que desenha na tela (`render/`). É a única que usa a biblioteca gráfica libGDX.
+
 ### dt
 
 O tempo de um passo do jogo, em segundos.
+
+### protótipo
+
+Uma versão rápida e simples, em Python, para testar a ideia antes do Java.
+
+### roadmap
+
+A lista do que o jogo tem e do que falta: `docs/roadmap.md`.
 
 ## GitHub
 

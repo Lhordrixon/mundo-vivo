@@ -110,3 +110,38 @@ também passavam. Defeitos e correções:
 
 Teste adversarial (script): `if` invertido, `+1.5`, estado fixo, sem
 `dt`, limite 0.5 e `>= 3` agora falham.
+
+## Rodada 3 · 03/10/2026 · Fase D (3.0 a 4.4 e Prova N3)
+
+Testes Java do "Alan" compilados e rodados contra o código real (javac
+e JUnit fora do Gradle). 22 defeitos; os principais e o que foi feito:
+
+- A #12 estava fechada: um commit da Fase A citava "Resolve #12" ao
+  descrever o defeito do modelo de PR → reaberta; a trilha ganhou os
+  Níveis 3 e 4.
+- 3.0 pulava "abrir no Android Studio" (cria `local.properties`) e
+  misturava `gradlew.bat` com Git Bash → um caminho só: Git Bash e
+  `./gradlew`, com o passo do Android Studio; JDK "17, até 24".
+- 3.0 citava uma issue que não existia → criada a #23.
+- 3.2 dizia "1.0 de comida" (máximo real 0.95; `World` novo é todo
+  oceano) → 0.65 de grama e `setTile` antes do `FoodMap`; import certo
+  (`World`, `TileType`); renomear package e classe; os quatro testes que
+  a #9 pede, mais o doc de ecologia e o MAPA.
+- 3.2: "tire o `Math.min`" era ambíguo e não quebrava a rebrota → as
+  duas trocas exatas (linha do `consume` e do `regrow`).
+- 3.3: com um pai só em -1 o teste passava antes do conserto → os dois
+  pais; como matar (três `strikeAt`); aviso de que os `if` empurram as
+  linhas citadas pela 2.1 (job "Aulas").
+- N3 aceitava um `assertEquals(1.0f, ...)` que sempre falha → 0.65; "o
+  teste confere a regra" era falso → "o conserto usa a regra".
+- 3.1: o Prever mostrava a resposta → `???`; `living()` explicado.
+- 4.1: `colorOf(-1)` lança exceção para tile sem dono; `BitmapFont`
+  avisada. 4.2: o toque duplo dispara antes um `tap`. 4.3: `-cp` com `;`
+  no Windows (em `docs/verificacao.md`).
+- Glossário ganhou JDK, SDK, gradlew, Git Bash, JUnit, teste,
+  tolerância, exceção, package/import, vermelho e verde, invariante,
+  reino/território, genoma/fenótipo, render, protótipo e roadmap.
+
+Conferido sem erro: âncoras do COMECE-AQUI, `applyDamage`, `checkId`,
+`TileMapping`, `World.setTile`, `FoodMap.retile`, `MIN_FATOR`/`MAX_FATOR`.
+O conserto da 3.3 resolve a #10: 44 testes de `SimulationTest` verdes.

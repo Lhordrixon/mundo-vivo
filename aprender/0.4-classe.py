@@ -1,4 +1,4 @@
-# Aula 5 de 17 · 0.4 Muitas criaturas: por que classe
+# Aula 5 de 25 · 0.4 Muitas criaturas: por que classe
 # Guia da aula: 0.4-classe.md
 
 # --- Antes: com dicionários ---

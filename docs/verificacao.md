@@ -76,6 +76,9 @@ java -cp build/sim:build/tools SimulationPreview 12345 2 3 vivo.png
 java -cp build/sim:build/tools SimulationReport 12345 5
 ```
 
+No Windows (também no Git Bash), o Java separa os caminhos com `;`:
+`-cp "build/sim;build/tools"`.
+
 O `WorldPreview` serve para ajustar `WorldConfig` em segundos. O
 `SimulationReport` faz o mesmo para `CreatureConfig`.
 

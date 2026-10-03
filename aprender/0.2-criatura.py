@@ -1,4 +1,4 @@
-# Aula 3 de 17 · 0.2 A criatura é um dicionário
+# Aula 3 de 25 · 0.2 A criatura é um dicionário
 # Guia da aula: 0.2-criatura.md
 
 # --- Exemplo pronto: leia e rode ---

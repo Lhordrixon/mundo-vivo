@@ -1,4 +1,4 @@
-# Aula 7 de 17 · 1.2 Andar
+# Aula 7 de 25 · 1.2 Andar
 # Guia da aula: 1.2-andar.md
 import math
 

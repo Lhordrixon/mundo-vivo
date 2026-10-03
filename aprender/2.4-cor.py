@@ -1,4 +1,4 @@
-# Aula 16 de 17 · 2.4 Mudar uma cor e ver no APK
+# Aula 16 de 25 · 2.4 Mudar uma cor e ver no APK
 # Guia da aula: 2.4-cor.md
 # No jogo, uma cor é  new Color(r, g, b, a):
 # vermelho, verde e azul, de 0 a 1. O 4º é 1.

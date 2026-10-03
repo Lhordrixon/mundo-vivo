@@ -39,10 +39,22 @@ Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java d
 
 </details>
 
-<details><summary>🔵 Nível 3 · 🟣 Nível 4 · 🔒 bloqueados</summary>
+<details><summary>🔵 <b>Nível 3 · Corrigindo</b> (precisa de PC)</summary>
 
-- 🔵 **Nível 3 · Corrigindo** — consertar um bug de verdade, com teste.
-- 🟣 **Nível 4 · Construindo** — criar uma coisa nova no jogo.
+- 🟦 [3.0 O jogo no seu PC](3.0-pc.md)
+- 🟦 [3.1 Ler um teste](3.1-ler-teste.md)
+- 🟦 [3.2 O teste da comida](3.2-teste-comida.md)
+- 🟦 [3.3 Consertar um bug](3.3-bug-reino.md)
+- 🧪 Já sabe isso? Faça a [Prova N3](provas/N3.md): passou, pode pular.
+
+</details>
+
+<details><summary>🟣 <b>Nível 4 · Construindo</b></summary>
+
+- 🟪 [4.1 Desenhar o território](4.1-territorio.md)
+- 🟪 [4.2 Mudar o terreno com o dedo](4.2-terreno.md)
+- 🟪 [4.3 Um gene que se vê](4.3-gene-visivel.md)
+- 🟪 [4.4 O seu projeto](4.4-projeto-livre.md)
 
 </details>
 

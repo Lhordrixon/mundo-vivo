@@ -1,4 +1,4 @@
-# Aula 9 de 17 · 1.4 Comer
+# Aula 9 de 25 · 1.4 Comer
 # Guia da aula: 1.4-comer.md
 
 regrowth_per_second = 0.1   # no jogo é 0.003

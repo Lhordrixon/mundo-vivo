@@ -1,4 +1,4 @@
-# Aula 14 de 17 · 2.2 Primeiro PR pelo celular
+# Aula 14 de 25 · 2.2 Primeiro PR pelo celular
 # Guia da aula: 2.2-pr-celular.md
 # Os passos do pull request estão embaralhados.
 
