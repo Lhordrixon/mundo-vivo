@@ -1,0 +1,64 @@
+name: APK no emulador
+
+# Sem aparelho real para testar, este workflow baixa o mundo-vivo.apk da
+# Release ultima-versao (o mesmo que o Alan instala), abre num emulador
+# Android, espera 20 segundos e confere: o processo continua vivo e o
+# logcat não tem "FATAL EXCEPTION". Guarda a captura de tela e o logcat
+# como artefato "emulador".
+#
+# Roda depois de cada "Compilar APK" verde na main, e à mão. Como roda
+# depois do merge, nunca bloqueia um PR.
+on:
+  workflow_run:
+    workflows: ["Compilar APK"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulador:
+    name: Abrir o jogo no emulador
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Baixar o APK da Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download ultima-versao -p mundo-vivo.apk
+
+      # O emulador precisa de aceleração (KVM) no runner do GitHub.
+      - name: Ligar o KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Abrir o jogo no emulador
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash .github/scripts/emulador.sh
+
+      - name: Guardar captura e logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulador
+          path: |
+            tela.png
+            logcat.txt
+          if-no-files-found: warn
+          retention-days: 14
