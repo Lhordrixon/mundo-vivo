@@ -3,6 +3,10 @@
 Guia para agentes e pessoas que vão mexer no código. O que o jogo é e
 como rodá-lo está no [README](README.md); aqui ficam as regras.
 
+**Ao iniciar qualquer sessão, antes de qualquer tarefa:** leia as issues
+abertas com rótulo `duvida`. Para cada uma: responda o Alan, corrija a
+causa na aula e feche a issue citando o commit.
+
 ## Pacotes
 
 Tudo sob `core/src/main/java/com/emannuel/mundovivo/`.
@@ -55,7 +59,7 @@ Cada um foi conferido no código. Não quebre sem discutir antes.
 - Refatoração estrutural (dividir `Simulation`, criar pacotes, quebrar o
   ciclo) só com aprovação do dono do projeto.
 - PR que cria ou move arquivo Java atualiza o [mapa](aprender/MAPA.md).
-- Mudança em linha Java citada no Nível 2 (`aprender/2.*`) atualiza a aula.
+- Java citado no Nível 2 mudou? Atualize a aula e `aprender/referencias.json`.
 
 ## Comandos
 
@@ -63,10 +67,10 @@ Cada um foi conferido no código. Não quebre sem discutir antes.
 ./gradlew core:test           # suíte JUnit, a mesma da CI
 ./gradlew desktop:run         # jogo no PC (precisa do SDK do Android)
 ./gradlew android:assembleDebug
+python3 aprender/verificar.py # aulas de aprender/ (job "Aulas")
 ```
 
-Sem Gradle, só com o JDK: compile `sim/` e `tools/` com `javac` e rode
-`SimSelfTest`, `WorldPreview`, `SimulationPreview` ou `SimulationReport`
+Sem Gradle, só com o JDK: `SimSelfTest` e as outras ferramentas de `tools/`
 (passo a passo em [docs/verificacao.md](docs/verificacao.md)).
 
 ## Antes de criar algo novo, procure em

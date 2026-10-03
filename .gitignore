@@ -31,3 +31,7 @@ Thumbs.db
 
 # Saídas das ferramentas de apoio
 preview-*.png
+
+# Arquivos de trabalho do tutor (tutor.yml)
+.tutor/
+__pycache__/

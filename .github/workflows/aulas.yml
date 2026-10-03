@@ -1,0 +1,53 @@
+name: Aulas
+
+# Confere as aulas de aprender/ com aprender/verificar.py: cada .py com a
+# resposta termina em "✅ Aula concluída!", com a lacuna vazia mostra a
+# dica em português, os links funcionam e o Java citado no Nível 2 ainda
+# está na linha que a aula diz.
+#
+# Se falhar na main, abre (ou atualiza) uma issue "aula-quebrada". O
+# tutor (tutor.yml) acorda quando este workflow termina com falha na main
+# e tenta corrigir.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  aulas:
+    name: Aulas
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir as aulas
+        run: python3 aprender/verificar.py 2>&1 | tee verificacao.txt; exit "${PIPESTATUS[0]}"
+
+      - name: Abrir a issue aula-quebrada
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          {
+            echo "O job **Aulas** falhou na main ([execução]($RUN_URL), commit ${GITHUB_SHA:0:7})."
+            echo
+            echo '```'
+            sed -n '/problema(s):/,$p' verificacao.txt | head -n 60
+            echo '```'
+          } > corpo.md
+          aberta=$(gh issue list --label aula-quebrada --state open --json number --jq '.[0].number // empty')
+          if [ -n "$aberta" ]; then
+            gh issue comment "$aberta" --body-file corpo.md
+          else
+            gh issue create --title "Aula quebrada na main" --label aula-quebrada --body-file corpo.md
+          fi

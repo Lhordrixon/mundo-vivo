@@ -1,0 +1,42 @@
+name: Acompanhar a trilha
+
+# Uma vez por dia, sem Claude (.github/scripts/acompanhar.py):
+# - se a lista da trilha (#12) não avançar em 4 dias, comenta nela
+#   perguntando ao Alan em que aula ele parou (no máximo 1 vez por semana);
+# - fecha dúvidas que esperam resposta do Alan há 7 dias.
+#
+# Para testar sem escrever nada: Actions → Acompanhar a trilha → Run
+# workflow, com "simular" ligado e, se quiser, outra data em "hoje".
+on:
+  schedule:
+    - cron: '17 12 * * *'   # 9h17 em Brasília
+  workflow_dispatch:
+    inputs:
+      simular:
+        description: Só mostrar o que faria, sem comentar nem fechar nada
+        type: boolean
+        default: true
+      hoje:
+        description: Fingir outra data (AAAA-MM-DD), para testar
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  acompanhar:
+    name: Acompanhar
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir a trilha e as dúvidas
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIMULAR: ${{ github.event_name == 'workflow_dispatch' && inputs.simular && '1' || '0' }}
+          HOJE: ${{ inputs.hoje }}
+        run: python3 .github/scripts/acompanhar.py
