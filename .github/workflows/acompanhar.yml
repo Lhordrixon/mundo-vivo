@@ -1,9 +1,13 @@
 name: Acompanhar a trilha
 
 # Uma vez por dia, sem Claude (.github/scripts/acompanhar.py):
-# - se a lista da trilha (#12) não avançar em 4 dias, comenta nela
-#   perguntando ao Alan em que aula ele parou (no máximo 1 vez por semana);
-# - fecha dúvidas que esperam resposta do Alan há 7 dias.
+# - revisão espaçada: ~2 e ~7 dias depois de cada aula marcada na trilha
+#   (#12), uma pergunta de recuperação; o rótulo sem-revisao desliga;
+# - se a lista não avançar em 4 dias, pergunta em que aula ele parou;
+#   depois de 4 semanas parado, para;
+# - teto: 1 mensagem por semana, somando revisão e lembrete;
+# - fecha dúvidas que esperam resposta do Alan há 7 dias;
+# - às segundas, grava docs/clear-x/METRICAS.md (commit na main).
 #
 # Para testar sem escrever nada: Actions → Acompanhar a trilha → Run
 # workflow, com "simular" ligado e, se quiser, outra data em "hoje".
@@ -30,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: read
+      contents: write   # gravar METRICAS.md
       issues: write
     steps:
       - uses: actions/checkout@v4
@@ -40,3 +44,14 @@ jobs:
           SIMULAR: ${{ github.event_name == 'workflow_dispatch' && inputs.simular && '1' || '0' }}
           HOJE: ${{ inputs.hoje }}
         run: python3 .github/scripts/acompanhar.py
+
+      - name: Gravar as métricas da semana
+        if: github.event_name == 'schedule'
+        run: |
+          if [ -n "$(git status --porcelain docs/clear-x/METRICAS.md)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add docs/clear-x/METRICAS.md
+            git commit -m "Métricas da trilha: semana de $(date +%F)"
+            git push
+          fi

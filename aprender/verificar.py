@@ -2,6 +2,11 @@
 
     python3 aprender/verificar.py          # todas as aulas
     python3 aprender/verificar.py 2.4-cor  # só uma
+    python3 aprender/verificar.py provas/N0
+
+As provas de nível (provas/N*.py) passam pelas mesmas conferências dos
+.py das aulas, menos a do .md. As provas em .md (provas/N*.md) passam
+pelo teto de palavras e pelos links.
 
 O que confere:
 1. Cada .py: linhas <= 60 colunas, sintaxe do Python 3.8, <= 40 linhas
@@ -114,10 +119,14 @@ def conferir_pep8(aula, src, nome, pasta_tmp):
 
 def conferir_aula(aula, respostas, pasta_tmp):
     print("== " + aula)
+    if not os.path.exists(os.path.join(AQUI, aula + ".py")):
+        print("  (sem .py: só o .md, conferido sem argumentos)")
+        return
     src = ler(os.path.join(AQUI, aula + ".py"))
     md_caminho = os.path.join(AQUI, aula + ".md")
     md = ler(md_caminho) if os.path.exists(md_caminho) else ""
-    if not md:
+    e_prova = aula.startswith("provas/")
+    if not md and not e_prova:
         problema(aula, "falta o " + aula + ".md")
 
     for i, linha in enumerate(src.splitlines(), 1):
@@ -141,11 +150,6 @@ def conferir_aula(aula, respostas, pasta_tmp):
         problema(aula, "sem respostas em respostas.json")
         return
 
-    if md and palavras_visiveis(md) > TETO_PALAVRAS:
-        problema(aula, "o .md mostra %d palavras visíveis (teto %d). "
-                 "Leve o 'por quê' e as exceções para <details>."
-                 % (palavras_visiveis(md), TETO_PALAVRAS))
-
     linhas_src = src.splitlines()
     for velho, _ in lacunas:
         if src.count(velho) != 1:
@@ -164,6 +168,8 @@ def conferir_aula(aula, respostas, pasta_tmp):
         if src.count(velho) != 1:
             problema(aula, "a lacuna %r aparece %d vezes no .py"
                      % (velho.strip(), src.count(velho)))
+        if e_prova:
+            continue
         for linha in novo.splitlines():
             s = linha.split("  #")[0].strip()
             if s and not s.startswith("#") \
@@ -210,7 +216,8 @@ def conferir_aula(aula, respostas, pasta_tmp):
             if k == 0 and not saida:
                 problema(aula, "nada aparece na tela antes da dica")
         elif p.returncode != 0 or not saida \
-                or saida[-1] != "✅ Aula concluída!":
+                or saida[-1] != ("✅ Prova %s concluída!" % aula[7:]
+                                 if e_prova else "✅ Aula concluída!"):
             problema(aula, "com todas as respostas, não terminou em "
                      "'✅ Aula concluída!': %r" % (ultima or saida[-1:]))
         else:
@@ -229,22 +236,45 @@ def ancoras(caminho):
     return saida
 
 
+def mds():
+    """As aulas, as provas em .md e os outros .md de aprender/."""
+    saida = [os.path.join(AQUI, n) for n in sorted(os.listdir(AQUI))
+             if n.endswith(".md")]
+    pasta = os.path.join(AQUI, "provas")
+    if os.path.isdir(pasta):
+        saida += [os.path.join(pasta, n) for n in sorted(os.listdir(pasta))
+                  if n.endswith(".md")]
+    return saida
+
+
+def conferir_tetos():
+    print("== palavras visíveis")
+    for caminho in mds():
+        nome = os.path.relpath(caminho, AQUI)
+        if not (re.match(r"\d\.\d-", os.path.basename(caminho))
+                or nome.startswith("provas")):
+            continue
+        n = palavras_visiveis(ler(caminho))
+        if n > TETO_PALAVRAS:
+            problema(nome, "mostra %d palavras visíveis (teto %d). Leve o "
+                     "'por quê' e as exceções para <details>."
+                     % (n, TETO_PALAVRAS))
+
+
 def conferir_links():
     print("== links")
     padrao_repo = re.compile(re.escape(REPO_URL)
                              + r"(?:blob|edit)/main/([^)#?\s]+)")
-    for nome in sorted(os.listdir(AQUI)):
-        if not nome.endswith(".md"):
-            continue
-        caminho = os.path.join(AQUI, nome)
+    for caminho in mds():
+        nome = os.path.relpath(caminho, AQUI)
         texto = re.sub(r"```.*?```", "", ler(caminho), flags=re.S)
         for m in re.finditer(r"\]\(([^)\s]+)\)", texto):
             alvo = m.group(1)
             if alvo.startswith(("http", "mailto")):
                 continue
             arquivo, _, ancora = alvo.partition("#")
-            destino = os.path.normpath(os.path.join(AQUI, arquivo)) \
-                if arquivo else caminho
+            destino = os.path.normpath(os.path.join(
+                os.path.dirname(caminho), arquivo)) if arquivo else caminho
             if not os.path.exists(destino):
                 problema(nome, "link quebrado: " + alvo)
             elif ancora and destino.endswith(".md") \
@@ -296,10 +326,15 @@ def main():
     aulas = pedidas or sorted(
         n[:-3] for n in os.listdir(AQUI)
         if re.match(r"\d\.\d-.*\.py$", n))
+    if not pedidas and os.path.isdir(os.path.join(AQUI, "provas")):
+        aulas += sorted("provas/" + n[:-3]
+                        for n in os.listdir(os.path.join(AQUI, "provas"))
+                        if re.match(r"N\d\.py$", n))
     with tempfile.TemporaryDirectory() as pasta_tmp:
         for aula in aulas:
             conferir_aula(aula, respostas, pasta_tmp)
     if not pedidas:
+        conferir_tetos()
         conferir_links()
         conferir_java()
     print()
