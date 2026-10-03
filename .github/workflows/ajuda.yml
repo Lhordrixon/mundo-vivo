@@ -1,0 +1,34 @@
+name: Ajuda
+
+# Responde uma dúvida em minutos, sem LLM e sem segredo
+# (.github/scripts/ajuda.py). Usa o "⚠️ Não funcionou?" da aula e do passo
+# escolhidos no formulário e pede a mensagem de erro se ela faltar.
+# Só responde a wrgw34wg3gghw3g e Lhordrixon (TESTE: Lhordriyon, a conta do
+# Claude, liberada só durante o teste; sai no PR seguinte). O tutor com LLM (tutor.yml),
+# se estiver ligado, vem depois e não repete esta resposta.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  ajuda:
+    name: Ajuda
+    if: >-
+      github.event.label.name == 'duvida' &&
+      contains(fromJSON('["wrgw34wg3gghw3g","Lhordrixon","Lhordriyon"]'), github.event.sender.login)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Responder com o Não funcionou? da aula
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMERO: ${{ github.event.issue.number }}
+          CORPO: ${{ github.event.issue.body }}
+        run: python3 .github/scripts/ajuda.py
