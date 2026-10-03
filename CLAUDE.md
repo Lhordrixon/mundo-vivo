@@ -59,7 +59,24 @@ Cada um foi conferido no código. Não quebre sem discutir antes.
 - Refatoração estrutural (dividir `Simulation`, criar pacotes, quebrar o
   ciclo) só com aprovação do dono do projeto.
 - PR que cria ou move arquivo Java atualiza o [mapa](aprender/MAPA.md).
-- Java citado no Nível 2 mudou? Atualize a aula e `aprender/referencias.json`.
+- Java citado nos Níveis 2 a 4 mudou? Atualize a aula e `aprender/referencias.json`.
+
+## Regras para agentes
+
+- Não pergunte ao dono: ele só tem celular e não programa. Decida pela
+  ordem Correção > Aprendizagem > Usabilidade > Acessibilidade >
+  Clareza > Performance > Manutenibilidade > Estética >
+  Entretenimento, e escreva o porquê no PR.
+- Commit e PR nunca escrevem palavra de fechamento (`Resolve`, `Fecha`,
+  `Closes`) junto de `#12`: a trilha do Alan fecharia no merge.
+- Toda aula alterada passa pelo aprendiz simulado; o resultado vai para
+  `docs/clear-x/aprendiz-simulado.md`. Ele é filtro de defeitos, não
+  prova de aprendizagem.
+- Nunca aumente as palavras visíveis de uma aula nem o `TETO_PALAVRAS`
+  do `aprender/verificar.py`.
+- Nada de neurociência pop, estilos de aprendizagem ou gamificação
+  (pontos, sequência, medalha, ranking, contagem regressiva).
+- Documentos de agente ficam em `docs/clear-x/`, fora das aulas.
 
 ## Comandos
 

@@ -101,6 +101,18 @@ A lista completa, com o arquivo onde cada regra é verificável, está no
 
 Nenhuma pergunta é boba. Um erro relatado já é uma contribuição.
 
+## Quem fez o quê
+
+Cada mudança tem dono, e o histórico do Git guarda isso. Para ver quem
+mexeu num arquivo, abra o arquivo no GitHub e toque em **History**
+(ícone de relógio, no canto de cima do arquivo).
+
+- **Emannuel** (`Lhordrixon`): dono do projeto; decide o rumo do jogo.
+- **Alan** (`wrgw34wg3gghw3g`): aprendiz e contribuidor. Veja os
+  [pull requests do Alan](https://github.com/Lhordrixon/mundo-vivo/pulls?q=is%3Apr+author%3Awrgw34wg3gghw3g).
+- **Claude** (`Lhordriyon`): agente que escreve código, aulas e robôs
+  sob as regras do [CLAUDE.md](CLAUDE.md).
+
 ---
 
 ## Direitos
