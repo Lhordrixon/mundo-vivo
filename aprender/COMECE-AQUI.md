@@ -24,13 +24,13 @@ Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java d
 
 </details>
 
-<details><summary>🟢 <b>Nível 2 · Mexendo no jogo</b> (em breve)</summary>
+<details><summary>🟢 <b>Nível 2 · Mexendo no jogo</b></summary>
 
-- 🟩 2.1 Ler Java
-- 🟩 2.2 Primeiro PR pelo celular
-- 🟩 2.3 Primeiro PR pelo PC
-- 🟩 2.4 Mudar uma cor e ver no APK
-- 🟩 2.5 Mudar um parâmetro e ver no APK
+- 🟩 [2.1 Ler Java](2.1-ler-java.md)
+- 🟩 [2.2 Primeiro PR pelo celular](2.2-pr-celular.md)
+- 🟩 [2.3 Primeiro PR pelo PC](2.3-pr-pc.md)
+- 🟩 [2.4 Mudar uma cor e ver no APK](2.4-cor.md)
+- 🟩 [2.5 Mudar um parâmetro e ver no APK](2.5-parametro.md)
 
 </details>
 

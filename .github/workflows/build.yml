@@ -3,6 +3,10 @@ name: Compilar APK
 # Roda a cada envio para a main, em todo pull request e também pode ser
 # disparado manualmente pela aba Actions do GitHub — útil para gerar um APK
 # sem precisar mudar nada no código.
+#
+# São dois trabalhos separados: os testes e o APK. Assim o APK sai mesmo
+# quando um teste falha, e dá para ver a mudança no celular (aulas 2.4 e
+# 2.5 de aprender/). O pull request continua vermelho se um teste falhar.
 on:
   push:
     branches: [main, master]
@@ -10,7 +14,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  testes:
+    name: Testes
     runs-on: ubuntu-latest
 
     steps:
@@ -21,15 +26,31 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: Rodar os testes da simulação
         run: ./gradlew core:test
 
+  apk:
+    name: APK de depuração
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
       - name: Compilar o APK de depuração
         run: ./gradlew android:assembleDebug
 
-      # O APK gerado fica anexado na execução, na aba Actions do GitHub —
-      # dá pra baixar direto pelo navegador do celular, sem precisar de PC.
+      # O APK gerado fica anexado na execução: na página do pull request,
+      # aba Checks → Compilar APK → Summary → Artifacts. Dá para baixar
+      # direto pelo navegador do celular, sem precisar de PC.
       - name: Publicar o APK
         uses: actions/upload-artifact@v4
         with:
