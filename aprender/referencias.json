@@ -1,0 +1,53 @@
+{
+ "_leia": "Linhas de Java que as aulas do Nível 2 citam. O verificar.py confere se cada linha ainda contém o texto de 'contem'. Se o Java mudar, atualize a aula e este arquivo juntos.",
+ "referencias": [
+  {
+   "aula": "2.1-ler-java",
+   "arquivo": "core/src/main/java/com/emannuel/mundovivo/sim/Simulation.java",
+   "linha": 445,
+   "contem": "if (Creature.CAUSE_STARVATION.equals(c.lastDamageCause)) {"
+  },
+  {
+   "aula": "2.1-ler-java",
+   "arquivo": "core/src/main/java/com/emannuel/mundovivo/sim/Simulation.java",
+   "linha": 558,
+   "contem": "float targetX = tile % world.width() + 0.5f;"
+  },
+  {
+   "aula": "2.1-ler-java",
+   "arquivo": "core/src/main/java/com/emannuel/mundovivo/sim/Simulation.java",
+   "linha": 559,
+   "contem": "float targetY = tile / world.width() + 0.5f;"
+  },
+  {
+   "aula": "2.1-ler-java",
+   "arquivo": "core/src/main/java/com/emannuel/mundovivo/sim/world/World.java",
+   "linha": 54,
+   "contem": "public boolean inBounds(int x, int y) {"
+  },
+  {
+   "aula": "2.1-ler-java",
+   "arquivo": "core/src/main/java/com/emannuel/mundovivo/sim/world/World.java",
+   "linha": 55,
+   "contem": "return x >= 0 && y >= 0 && x < width && y < height;"
+  },
+  {
+   "aula": "2.1-ler-java",
+   "arquivo": "core/src/main/java/com/emannuel/mundovivo/sim/world/World.java",
+   "linha": 56,
+   "contem": "}"
+  },
+  {
+   "aula": "2.4-cor",
+   "arquivo": "core/src/main/java/com/emannuel/mundovivo/render/CreatureRenderer.java",
+   "linha": 33,
+   "contem": "COLOR_SEEKING_MATE = new Color("
+  },
+  {
+   "aula": "2.5-parametro",
+   "arquivo": "core/src/main/java/com/emannuel/mundovivo/sim/creature/CreatureConfig.java",
+   "linha": 186,
+   "contem": "public float speedTilesPerSecond = "
+  }
+ ]
+}

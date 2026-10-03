@@ -1,7 +1,7 @@
 name: 🙋 Dúvida numa aula
 description: Travou numa aula de aprender/? Conte onde.
 title: "Dúvida: "
-labels: ["dúvida"]
+labels: ["duvida"]
 body:
   - type: markdown
     attributes:

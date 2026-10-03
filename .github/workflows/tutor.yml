@@ -1,0 +1,207 @@
+name: Tutor
+
+# O tutor das aulas: Claude Code (anthropics/claude-code-action) segue
+# aprender/TUTOR.md. Acorda com:
+# - issue com o rótulo "duvida" (aberta ou rotulada) e respostas nela;
+# - "@claude" num comentário de issue ou PR;
+# - falha do workflow "Aulas" na main (issue "aula-quebrada").
+#
+# Só atende wrgw34wg3gghw3g e Lhordrixon, para proteger a cota.
+# TESTE: Lhordriyon (a conta do Claude) liberada só durante a prova de
+# funcionamento; sai no PR seguinte.
+#
+# Autentica pela assinatura do Claude: precisa do segredo
+# CLAUDE_CODE_OAUTH_TOKEN (gerado com `claude setup-token`). Sem ele, o
+# job "checar" termina verde, avisa numa anotação e nada mais roda.
+#
+# O Claude só lê e edita arquivos e roda o verificar.py. Quem comenta,
+# faz commit, abre PR e fecha a issue são os passos fixos abaixo, que
+# aplicam as regras sem depender do modelo:
+# - mudança só dentro de aprender/ e verificar.py passando → commit
+#   direto na main;
+# - qualquer outra mudança → PR para o dono revisar.
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  workflow_run:
+    workflows: [Aulas]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tutor-${{ github.event.issue.number || github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  checar:
+    name: Checar se o tutor deve agir
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'failure' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.event == 'push') ||
+      (github.event_name != 'workflow_run' &&
+        contains(fromJSON('["wrgw34wg3gghw3g","Lhordrixon","Lhordriyon"]'), github.event.sender.login) &&
+        ((github.event_name == 'issues' && github.event.action == 'opened' &&
+            contains(github.event.issue.labels.*.name, 'duvida')) ||
+         (github.event_name == 'issues' && github.event.action == 'labeled' &&
+            github.event.label.name == 'duvida') ||
+         (github.event_name == 'issue_comment' &&
+            (contains(github.event.issue.labels.*.name, 'duvida') ||
+             contains(github.event.issue.labels.*.name, 'aula-quebrada') ||
+             contains(github.event.comment.body, '@claude')))))
+    outputs:
+      ligado: ${{ steps.c.outputs.ligado }}
+    steps:
+      - id: c
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "ligado=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ligado=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Tutor desligado::Falta o segredo CLAUDE_CODE_OAUTH_TOKEN. Gere com 'claude setup-token' e salve em Settings → Secrets and variables → Actions."
+          fi
+
+  tutor:
+    name: Tutor
+    needs: checar
+    if: needs.checar.outputs.ligado == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Preparar a conversa
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENTO: ${{ github.event_name }}
+          NUMERO_ISSUE: ${{ github.event.issue.number }}
+          E_PR: ${{ github.event.issue.pull_request != null }}
+        run: |
+          set -euo pipefail
+          mkdir -p .tutor
+          if [ "$EVENTO" = "workflow_run" ]; then
+            numero=$(gh issue list --label aula-quebrada --state open --json number --jq '.[0].number // empty')
+            {
+              echo "# Evento: o job Aulas falhou na main"
+              echo
+              echo "Issue aula-quebrada: #${numero:-nenhuma}"
+              echo
+              echo '```'
+              python3 aprender/verificar.py 2>&1 | tail -n 80 || true
+              echo '```'
+            } > .tutor/conversa.md
+          elif [ "$E_PR" = "true" ]; then
+            numero="$NUMERO_ISSUE"
+            {
+              echo "# Evento: menção no PR #$numero"
+              echo
+              gh pr view "$numero" --json title,author,body,files,comments \
+                --template '## {{.title}} (por {{.author.login}})
+
+          {{.body}}
+
+          ### Arquivos
+          {{range .files}}- {{.path}}
+          {{end}}
+          ### Comentários
+          {{range .comments}}**{{.author.login}}** ({{.createdAt}}):
+          {{.body}}
+
+          {{end}}'
+            } > .tutor/conversa.md
+          else
+            numero="$NUMERO_ISSUE"
+            {
+              echo "# Evento: issue #$numero"
+              echo
+              gh issue view "$numero" --json title,author,body,labels,comments \
+                --template '## {{.title}} (por {{.author.login}})
+          Rótulos: {{range .labels}}{{.name}} {{end}}
+
+          {{.body}}
+
+          ### Comentários
+          {{range .comments}}**{{.author.login}}** ({{.createdAt}}):
+          {{.body}}
+
+          {{end}}'
+            } > .tutor/conversa.md
+          fi
+          echo "NUMERO=${numero:-}" >> "$GITHUB_ENV"
+          echo "E_PR=$E_PR" >> "$GITHUB_ENV"
+
+      - name: Claude segue o TUTOR.md
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          prompt: |
+            Leia aprender/TUTOR.md e siga exatamente o que ele diz.
+            A conversa (ou a falha do job Aulas) está em .tutor/conversa.md.
+            Escreva a sua resposta em .tutor/resposta.md e a ação em .tutor/acao.
+          claude_args: >-
+            --max-turns 15
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(python3 aprender/verificar.py:*),Bash(git diff:*),Bash(git status:*)"
+
+      - name: Aplicar as regras (commit, PR, comentário, fechar)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          saida=$(mktemp -d)
+          cp -r .tutor/. "$saida"/ 2>/dev/null || true
+          rm -rf .tutor
+          acao=$(tr -d '[:space:]' < "$saida/acao" 2>/dev/null || echo responder)
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          nota=""
+          sha=""
+          if ! git diff --cached --quiet; then
+            arquivos=$(git diff --cached --name-only)
+            fora=$(echo "$arquivos" | grep -v '^aprender/' || true)
+            msg="Tutor: corrige a aula a partir da #${NUMERO:-?}"
+            if [ -z "$fora" ] && python3 aprender/verificar.py > "$saida/verificacao.txt" 2>&1; then
+              git commit -q -m "$msg" -m "Arquivos: $(echo $arquivos)"
+              git push -q origin HEAD:main
+              sha=$(git rev-parse --short HEAD)
+              nota="Corrigi a aula no commit $sha, para ninguém mais travar aí."
+            else
+              ramo="tutor/correcao-${NUMERO:-sem-issue}-$GITHUB_RUN_ID"
+              git switch -q -c "$ramo"
+              git commit -q -m "$msg"
+              git push -q origin "$ramo"
+              if [ -z "$fora" ]; then motivo="o verificar.py não passou"; else motivo="a mudança sai de aprender/"; fi
+              pr=$(gh pr create --base main --head "$ramo" \
+                --title "Tutor: correção pedida na #${NUMERO:-?}" \
+                --body "Correção proposta pelo tutor. Não foi direto para a main porque $motivo. Revise antes de aceitar.")
+              nota="Abri o PR $pr com uma correção, para o dono revisar."
+              acao=responder
+            fi
+          fi
+
+          if [ -n "${NUMERO:-}" ] && [ -s "$saida/resposta.md" ]; then
+            { cat "$saida/resposta.md"; if [ -n "$nota" ]; then printf '\n\n%s\n' "$nota"; fi; } > "$saida/comentario.md"
+            gh api "repos/$GITHUB_REPOSITORY/issues/$NUMERO/comments" -F body=@"$saida/comentario.md" > /dev/null
+          fi
+          if [ "$acao" = "fechar" ] && [ -n "${NUMERO:-}" ] && [ "$E_PR" != "true" ]; then
+            gh issue close "$NUMERO" --comment "Fechada pelo tutor.${sha:+ Correção no commit $sha.}"
+          fi
