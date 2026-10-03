@@ -58,5 +58,5 @@ jobs:
 
           Para instalar: baixe o mundo-vivo.apk no celular, abra o arquivo e permita a instalação de fontes desconhecidas quando o Android pedir.
 
-          Cada Release é assinada com uma chave de depuração nova. Para trocar de versão, desinstale a anterior antes."
+          A chave de depuração é fixa (android/debug.keystore): dá para instalar uma versão por cima da outra. Só quem instalou um APK de antes dessa chave precisa desinstalar uma vez."
           fi

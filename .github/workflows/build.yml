@@ -1,21 +1,40 @@
 name: Compilar APK
 
 # Roda a cada envio para a main, em todo pull request e também pode ser
-# disparado manualmente pela aba Actions do GitHub — útil para gerar um APK
-# sem precisar mudar nada no código.
+# disparado manualmente pela aba Actions do GitHub.
 #
 # São dois trabalhos separados: os testes e o APK. Assim o APK sai mesmo
 # quando um teste falha, e dá para ver a mudança no celular (aulas 2.4 e
 # 2.5 de aprender/). O pull request continua vermelho se um teste falhar.
+#
+# Onde o APK fica, sempre com o nome mundo-vivo.apk:
+# - envio para a main: Release fixa "ultima-versao", trocada a cada build.
+#   Link permanente:
+#   https://github.com/Lhordrixon/mundo-vivo/releases/download/ultima-versao/mundo-vivo.apk
+# - pull request: pré-release "pr-<número>", com um comentário no PR que
+#   leva direto ao arquivo. Ela é apagada quando o PR fecha.
+# - pull request vindo de fork: só o artefato (o GitHub não deixa um fork
+#   publicar Release aqui).
+# - sempre: o artefato mundo-vivo-debug da execução, como reserva.
 on:
   push:
     branches: [main, master]
   pull_request:
+    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Um build por vez em cada PR (e na main): a publicação não se atropela.
+concurrency:
+  group: apk-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
   testes:
     name: Testes
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +52,12 @@ jobs:
 
   apk:
     name: APK de depuração
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write        # criar e trocar as Releases
+      issues: write          # comentar no PR
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -48,12 +72,127 @@ jobs:
       - name: Compilar o APK de depuração
         run: ./gradlew android:assembleDebug
 
-      # O APK gerado fica anexado na execução: na página do pull request,
-      # aba Checks → Compilar APK → Summary → Artifacts. Dá para baixar
-      # direto pelo navegador do celular, sem precisar de PC.
-      - name: Publicar o APK
+      # Nome fixo, e falha aqui mesmo se o APK não existir: melhor um erro
+      # claro neste passo do que uma Release vazia.
+      - name: Dar o nome mundo-vivo.apk
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(android/build/outputs/apk/debug/*.apk)
+          if [ "${#apks[@]}" -ne 1 ]; then
+            echo "::error::Esperava 1 APK em android/build/outputs/apk/debug, achei ${#apks[@]}."
+            exit 1
+          fi
+          cp "${apks[0]}" mundo-vivo.apk
+          test -s mundo-vivo.apk
+
+      # A chave é fixa (android/debug.keystore): este valor tem de ser o
+      # mesmo em todas as execuções. Se mudar, instalar por cima falha.
+      - name: Mostrar a assinatura
+        run: |
+          set -euo pipefail
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          sha=$("$apksigner" verify --print-certs mundo-vivo.apk | grep -m1 'SHA-256' | awk '{print $NF}')
+          if [ -z "$sha" ]; then
+            echo "::error::Não consegui ler a assinatura do APK."
+            exit 1
+          fi
+          echo "SHA-256 do certificado: $sha"
+          echo "::notice title=Assinatura do APK::SHA-256 $sha"
+          echo "ASSINATURA=$sha" >> "$GITHUB_ENV"
+
+      - name: Guardar o artefato (reserva)
         uses: actions/upload-artifact@v4
         with:
           name: mundo-vivo-debug
-          path: android/build/outputs/apk/debug/*.apk
+          path: mundo-vivo.apk
           retention-days: 30
+          if-no-files-found: error
+
+      - name: Publicar na Release ultima-versao
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          notas="APK de depuração da main, commit ${GITHUB_SHA:0:7}. Trocado a cada envio para a main.
+
+          Para instalar: baixe o mundo-vivo.apk no celular, abra o arquivo e permita a instalação quando o Android pedir.
+
+          Assinatura (SHA-256 do certificado): \`$ASSINATURA\`"
+          if gh release view ultima-versao > /dev/null 2>&1; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/ultima-versao" \
+              -f sha="$GITHUB_SHA" -F force=true > /dev/null
+            gh release upload ultima-versao mundo-vivo.apk --clobber
+            gh release edit ultima-versao --notes "$notas"
+          else
+            gh release create ultima-versao mundo-vivo.apk --target "$GITHUB_SHA" \
+              --title "Última versão (main)" --latest=false --notes "$notas"
+          fi
+
+      - name: Publicar a pré-release do PR e comentar
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          tag="pr-$PR"
+          notas="APK de depuração do PR #$PR, commit ${SHA:0:7}. Apagado quando o PR fechar.
+
+          Assinatura (SHA-256 do certificado): \`$ASSINATURA\`"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" \
+              -f sha="$SHA" -F force=true > /dev/null
+            gh release upload "$tag" mundo-vivo.apk --clobber
+            gh release edit "$tag" --notes "$notas"
+          else
+            gh release create "$tag" mundo-vivo.apk --target "$SHA" \
+              --prerelease --title "APK do PR #$PR" --notes "$notas"
+          fi
+
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/mundo-vivo.apk"
+          corpo="<!-- apk-do-pr -->
+          📲 **[Baixar o APK deste PR]($url)**
+
+          Toque no link pelo celular e abra o arquivo baixado. Versão: \`${SHA:0:7}\`, atualizada a cada envio para este PR."
+          # Um comentário só por PR: na segunda vez em diante, ele é editado.
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.body | contains("<!-- apk-do-pr -->")) | .id' | sed -n 1p)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$corpo" > /dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$corpo" > /dev/null
+          fi
+
+  limpar:
+    name: Apagar o APK do PR
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Apagar a pré-release e avisar no comentário
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh release delete "pr-$PR" --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" \
+            || echo "Não havia pré-release pr-$PR."
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/ultima-versao/mundo-vivo.apk"
+          corpo="<!-- apk-do-pr -->
+          Este PR fechou e o APK dele foi apagado. O APK da main fica sempre em [mundo-vivo.apk]($url)."
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.body | contains("<!-- apk-do-pr -->")) | .id' | sed -n 1p)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$corpo" > /dev/null
+          fi

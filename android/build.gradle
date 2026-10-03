@@ -19,8 +19,23 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    // Chave de depuração fixa, versionada de propósito: não é segredo, e sem
+    // ela cada máquina (e cada execução da CI) assina o APK com uma chave
+    // nova, e instalar uma versão por cima da outra falha com "App não
+    // instalado". A senha é a padrão do Android para a chave de debug.
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storeType 'pkcs12'
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
         debug {
+            signingConfig signingConfigs.debug
             applicationIdSuffix '.debug'
             versionNameSuffix '-debug'
         }
