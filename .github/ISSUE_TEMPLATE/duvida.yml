@@ -29,9 +29,18 @@ body:
         - 2.3 Primeiro PR pelo PC
         - 2.4 Mudar uma cor e ver no APK
         - 2.5 Mudar um parâmetro e ver no APK
+        - 3.0 O jogo no seu PC
+        - 3.1 Ler um teste
+        - 3.2 O teste da comida
+        - 3.3 Consertar um bug
+        - 4.1 Desenhar o território
+        - 4.2 Mudar o terreno com o dedo
+        - 4.3 Um gene que se vê
+        - 4.4 O seu projeto
         - Prova N0
         - Prova N1
         - Prova N2
+        - Prova N3
         - Outra coisa
     validations:
       required: true

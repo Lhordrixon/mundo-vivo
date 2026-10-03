@@ -1,4 +1,4 @@
-# Aula 12 de 17 · 1.7 O loop do mundo
+# Aula 12 de 25 · 1.7 O loop do mundo
 # Guia da aula: 1.7-loop.md
 
 # ✏️ Sua vez (MUDAR): corte pela metade a comida

@@ -1,4 +1,4 @@
-# Aula 15 de 17 · 2.3 Primeiro PR pelo PC
+# Aula 15 de 25 · 2.3 Primeiro PR pelo PC
 # Guia da aula: 2.3-pr-pc.md
 # Cada botão do GitHub Desktop faz o mesmo que
 # um comando do git. Aqui estão embaralhados.

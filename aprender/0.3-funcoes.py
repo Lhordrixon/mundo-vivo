@@ -1,4 +1,4 @@
-# Aula 4 de 17 · 0.3 Funções que mudam a criatura
+# Aula 4 de 25 · 0.3 Funções que mudam a criatura
 # Guia da aula: 0.3-funcoes.md
 
 # --- Exemplo pronto: leia e rode ---

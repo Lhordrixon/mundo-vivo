@@ -1,4 +1,4 @@
-# Aula 8 de 17 · 1.3 Fome
+# Aula 8 de 25 · 1.3 Fome
 # Guia da aula: 1.3-fome.md
 
 hunger_per_second = 0.045      # do CreatureConfig

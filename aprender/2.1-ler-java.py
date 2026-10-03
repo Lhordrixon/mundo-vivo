@@ -1,4 +1,4 @@
-# Aula 13 de 17 · 2.1 Ler Java
+# Aula 13 de 25 · 2.1 Ler Java
 # Guia da aula: 2.1-ler-java.md
 # Cada bloco traz linhas Java do jogo.
 # Você escreve a mesma conta em Python.

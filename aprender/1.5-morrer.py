@@ -1,4 +1,4 @@
-# Aula 10 de 17 · 1.5 Morrer
+# Aula 10 de 25 · 1.5 Morrer
 # Guia da aula: 1.5-morrer.md
 
 class Creature:

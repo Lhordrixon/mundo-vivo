@@ -1,5 +1,5 @@
 {
- "_leia": "Linhas de Java que as aulas do Nível 2 citam. O verificar.py confere se cada linha ainda contém o texto de 'contem'. Se o Java mudar, atualize a aula e este arquivo juntos.",
+ "_leia": "Linhas de Java que as aulas dos Níveis 2 a 4 citam. O verificar.py confere se cada linha ainda contém o texto de 'contem'. Se o Java mudar, atualize a aula e este arquivo juntos.",
  "referencias": [
   {
    "aula": "2.1-ler-java",
@@ -48,6 +48,66 @@
    "arquivo": "core/src/main/java/com/emannuel/mundovivo/sim/creature/CreatureConfig.java",
    "linha": 186,
    "contem": "public float speedTilesPerSecond = "
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 32,
+   "contem": "@Test"
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 33,
+   "contem": "@DisplayName(\"dano acumula entre golpes\")"
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 34,
+   "contem": "void damageAccumulates() {"
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 35,
+   "contem": "Creature c = living();"
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 36,
+   "contem": ""
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 37,
+   "contem": "c.applyDamage(0.3f, \"combate\");"
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 38,
+   "contem": "c.applyDamage(0.3f, \"combate\");"
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 39,
+   "contem": ""
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 40,
+   "contem": "assertEquals(0.4f, c.health, 1e-6f);"
+  },
+  {
+   "aula": "3.1-ler-teste",
+   "arquivo": "core/src/test/java/com/emannuel/mundovivo/sim/creature/CreatureTest.java",
+   "linha": 41,
+   "contem": "}"
   }
  ]
 }

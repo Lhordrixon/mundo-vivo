@@ -1,4 +1,4 @@
-# Aula 2 de 17 · 0.1 O mapa é uma lista de listas
+# Aula 2 de 25 · 0.1 O mapa é uma lista de listas
 # Guia da aula: 0.1-mapa.md
 
 # --- Exemplo pronto: leia e rode ---

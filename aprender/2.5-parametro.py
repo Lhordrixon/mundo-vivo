@@ -1,4 +1,4 @@
-# Aula 17 de 17 · 2.5 Mudar um parâmetro e ver no APK
+# Aula 17 de 25 · 2.5 Mudar um parâmetro e ver no APK
 # Guia da aula: 2.5-parametro.md
 # No jogo, a velocidade fica no CreatureConfig:
 #   public float speedTilesPerSecond = 2.2f;

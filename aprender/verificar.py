@@ -20,7 +20,7 @@ O que confere:
 6. Links relativos entre os .md (e âncoras) apontam para algo que existe.
 7. Links para github.com/.../blob|edit/main/<arquivo> apontam para um
    arquivo que existe.
-8. Cada linha de Java citada no Nível 2 (referencias.json) ainda contém
+8. Cada linha de Java citada nos Níveis 2 a 4 (referencias.json) contém
    o texto esperado. Se o Java mudar, a aula desatualizada vira erro.
 9. PEP 8 (pycodestyle, linhas de até 60), com a lacuna vazia e com as
    respostas. Sem o pycodestyle instalado, avisa e pula; com
@@ -287,7 +287,7 @@ def conferir_links():
 
 
 def conferir_java():
-    print("== Java citado no Nível 2")
+    print("== Java citado nos Níveis 2 a 4")
     refs = json.loads(ler(os.path.join(AQUI, "referencias.json")))
     registradas = set()
     for r in refs["referencias"]:
@@ -304,12 +304,12 @@ def conferir_java():
             problema(onde, "a aula espera %r nesta linha, mas agora está "
                      "%r. Atualize a aula e referencias.json."
                      % (r["contem"], atual.strip()))
-    # Todo link de linha para a main, nas aulas do Nível 2, precisa estar
-    # registrado, senão ninguém percebe quando ele envelhecer.
+    # Todo link de linha para a main, nas aulas dos Níveis 2 a 4, precisa
+    # estar registrado, senão ninguém percebe quando ele envelhecer.
     padrao = re.compile(re.escape(REPO_URL)
                         + r"blob/main/([^)#?\s]+\.java)#L(\d+)(?:-L(\d+))?")
     for nome in sorted(os.listdir(AQUI)):
-        if not (nome.startswith("2.") and nome.endswith(".md")):
+        if not (nome[:2] in ("2.", "3.", "4.") and nome.endswith(".md")):
             continue
         for m in padrao.finditer(ler(os.path.join(AQUI, nome))):
             ini = int(m.group(2))

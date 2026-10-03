@@ -1,4 +1,4 @@
-# Aula 1 de 17 · 0.0 Preparar celular e PC
+# Aula 1 de 25 · 0.0 Preparar celular e PC
 # Guia da aula: 0.0-preparar.md
 
 # --- Exemplo pronto: só rode ---

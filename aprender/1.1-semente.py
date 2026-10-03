@@ -1,4 +1,4 @@
-# Aula 6 de 17 · 1.1 O mapa nasce de uma semente
+# Aula 6 de 25 · 1.1 O mapa nasce de uma semente
 # Guia da aula: 1.1-semente.md
 import random
 

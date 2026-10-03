@@ -1,4 +1,4 @@
-# Aula 11 de 17 · 1.6 Reproduzir
+# Aula 11 de 25 · 1.6 Reproduzir
 # Guia da aula: 1.6-reproduzir.md
 
 adult_age_seconds = 22          # do CreatureConfig
