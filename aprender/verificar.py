@@ -53,6 +53,22 @@ def linhas_de_codigo(src):
                if linha.strip() and not linha.strip().startswith("#"))
 
 
+def palavras_visiveis(md):
+    """Palavras que aparecem sem abrir nenhum <details> fechado.
+
+    Um <details open> já aparece aberto: o texto dele conta."""
+    texto = md
+    while True:
+        novo = re.sub(r"<details>(?:(?!<details).)*?</details>", " ",
+                      texto, flags=re.S)
+        if novo == texto:
+            break
+        texto = novo
+    texto = re.sub(r"\]\([^)]*\)", "]", texto)
+    texto = re.sub(r"https?://\S+", " ", texto)
+    return len(re.findall(r"\w+", texto))
+
+
 def linha_de_mapa(linha):
     """Linha desenhada: sem letras, fora o 'o' da criatura e o 'X'."""
     t = linha.strip()
