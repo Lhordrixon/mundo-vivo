@@ -17,6 +17,9 @@ O que confere:
    arquivo que existe.
 8. Cada linha de Java citada no Nível 2 (referencias.json) ainda contém
    o texto esperado. Se o Java mudar, a aula desatualizada vira erro.
+9. PEP 8 (pycodestyle, linhas de até 60), com a lacuna vazia e com as
+   respostas. Sem o pycodestyle instalado, avisa e pula; com
+   EXIGIR_PEP8=1 (a CI usa), a falta dele vira erro.
 
 Só biblioteca padrão. Sai com código 1 se houver problema.
 """
@@ -46,8 +49,8 @@ def ler(caminho):
 
 
 def linhas_de_codigo(src):
-    return sum(1 for l in src.splitlines()
-               if l.strip() and not l.strip().startswith("#"))
+    return sum(1 for linha in src.splitlines()
+               if linha.strip() and not linha.strip().startswith("#"))
 
 
 def linha_de_mapa(linha):
@@ -64,6 +67,25 @@ def rodar(src, pasta_tmp):
     return subprocess.run([sys.executable, caminho], capture_output=True,
                           text=True, encoding="utf-8", timeout=60,
                           cwd=AQUI, env=env)
+
+
+def conferir_pep8(aula, src, nome, pasta_tmp):
+    caminho = os.path.join(pasta_tmp, nome + ".py")
+    with open(caminho, "w", encoding="utf-8") as f:
+        f.write(src)
+    p = subprocess.run([sys.executable, "-m", "pycodestyle",
+                        "--max-line-length=60", caminho],
+                       capture_output=True, text=True, encoding="utf-8")
+    if "No module named" in p.stderr:
+        if os.environ.get("EXIGIR_PEP8") == "1":
+            problema(aula, "pycodestyle não está instalado")
+        elif not getattr(conferir_pep8, "avisou", False):
+            print("  (pycodestyle não instalado: PEP 8 não conferida."
+                  " Instale com: pip install pycodestyle)")
+            conferir_pep8.avisou = True
+        return
+    for linha in p.stdout.splitlines():
+        problema(aula, "PEP 8 (%s): %s" % (nome, linha.split(":", 1)[1]))
 
 
 def conferir_aula(aula, respostas, pasta_tmp):
@@ -105,6 +127,12 @@ def conferir_aula(aula, respostas, pasta_tmp):
             if s and not s.startswith("#") \
                     and " ".join(s.split()) not in md_junto:
                 problema(aula, "a resposta %r não está no .md" % s)
+
+    conferir_pep8(aula, src, "lacuna", pasta_tmp)
+    com_respostas = src
+    for velho, novo in lacunas:
+        com_respostas = com_respostas.replace(velho, novo, 1)
+    conferir_pep8(aula, com_respostas, "resposta", pasta_tmp)
 
     etapa_src = src
     for k in range(len(lacunas) + 1):

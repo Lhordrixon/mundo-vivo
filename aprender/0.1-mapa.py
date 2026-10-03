@@ -37,8 +37,8 @@ agua = 0
 
 
 assert agua == 28, (
-    "Contei " + str(agua) + " tiles de água, "
-    "mas são 28. Para cada \"~\", some 1 em agua.")
+    "Contei " + str(agua) + " tiles de água, mas são 28. "
+    "Para cada \"~\", some 1 em agua.")
 
 # --- Final: o mesmo desenho de cima ---
 for linha in mapa:

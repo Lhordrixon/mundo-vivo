@@ -8,6 +8,7 @@ b = {"x": 4, "y": 1, "hungre": 3}  # digitei errado!
 # Só quebra depois, quando alguém pedir
 # b["hunger"].
 
+
 # --- Depois: com uma classe ---
 # A classe é o molde. Toda criatura sai igual.
 class Creature:
@@ -22,6 +23,7 @@ class Creature:
     def comer(self):
         pass   # ✏️ MONTAR: troque este pass
 
+
 criaturas = [Creature(1, 1), Creature(3, 1)]
 criaturas[0].passar_tempo()
 print("Fome da 1ª:", criaturas[0].hunger)
@@ -32,8 +34,7 @@ print("Fome da 1ª:", criaturas[0].hunger)
 
 
 assert len(criaturas) == 3 and criaturas[2].x == 5, (
-    "A lista deveria ter 3 criaturas, a última em"
-    " x 5. Use  criaturas.append(Creature(...))")
+    "Falta a 3ª criatura, em x 5: criaturas.append(...)")
 
 # --- ✏️ MONTAR ---
 # Na classe lá em cima, escreva comer: a
@@ -42,12 +43,12 @@ assert len(criaturas) == 3 and criaturas[2].x == 5, (
 t = Creature(0, 0)
 t.hunger = 5
 t.comer()
-assert t.hunger == 2, ("Com fome 5, comer deixou "
-    + str(t.hunger) + ", não 2. Faltou tirar 3?")
+assert t.hunger == 2, (
+    "Após comer: " + str(t.hunger) + ", não 2. Tirou 3?")
 t.hunger = 1
 t.comer()
-assert t.hunger == 0, ("Com fome 1, comer deixou "
-    + str(t.hunger) + ", não 0. Fome não fica negativa.")
+assert t.hunger == 0, (
+    "Ficou " + str(t.hunger) + ": fome não é negativa.")
 
 # --- Final: as criaturas no mapa ---
 mapa = [

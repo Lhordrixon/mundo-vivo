@@ -24,23 +24,25 @@ for numero in [1, 2, 3, 4]:
 # --- ✏️ MUDAR ---
 # Qual número envia a sua branch para o GitHub?
 envia = None
-assert envia == 2, ("Enviar para o GitHub é o "
-    "push. Qual número tem git push?")
+assert envia == 2, (
+    "Enviar para o GitHub é o push. Qual número tem git "
+    "push?")
 
 # --- ✏️ MONTAR ---
 # Ponha os 4 números na ordem em que você usa,
 # numa lista. Exemplo de formato: [2, 1, 4, 3]
 ordem = None
-assert ordem is not None, ("Troque o None por uma "
-    "lista com os 4 números.")
-assert sorted(ordem) == [1, 2, 3, 4], ("Use os "
-    "números de 1 a 4, cada um uma vez só.")
-assert ordem.index(3) < ordem.index(4), ("Primeiro "
-    "você precisa ter o projeto: Clone.")
-assert ordem.index(4) < ordem.index(1), ("Crie a "
-    "branch antes de salvar o commit nela.")
-assert ordem.index(1) < ordem.index(2), ("Só dá para"
-    " enviar depois de salvar: commit, depois push.")
+assert ordem is not None, (
+    "Troque o None por uma lista com os 4 números.")
+assert sorted(ordem) == [1, 2, 3, 4], (
+    "Use os números de 1 a 4, cada um uma vez só.")
+assert ordem.index(3) < ordem.index(4), (
+    "Primeiro você precisa ter o projeto: Clone.")
+assert ordem.index(4) < ordem.index(1), (
+    "Crie a branch antes de salvar o commit nela.")
+assert ordem.index(1) < ordem.index(2), (
+    "Só dá para enviar depois de salvar: commit, depois "
+    "push.")
 
 print("Sua ordem:")
 for numero in ordem:

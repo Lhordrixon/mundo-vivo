@@ -19,16 +19,20 @@ def desenhar(c):
     print("~ água  . terra  o criatura")
     print("fome:", c["hunger"], "com fome?", com_fome(c))
 
+
 def com_fome(c):
     return c["hunger"] >= 5   # devolve True ou False
 
+
 def andar_direita(c):
     c["x"] = c["x"] + 1
+
 
 c = {"x": 1, "y": 1, "hunger": 3}
 desenhar(c)
 andar_direita(c)
 desenhar(c)
+
 
 # --- ✏️ MUDAR ---
 # Quando o tempo passa, a fome sobe 1.
@@ -36,10 +40,11 @@ desenhar(c)
 def passar_tempo(c):
     pass
 
+
 passar_tempo(c)
 assert c["hunger"] == 4, (
-    "Depois de 1 passo a fome deveria ser 4, mas"
-    " está " + str(c["hunger"]) + ". Faltou somar 1?")
+    "Fome " + str(c["hunger"]) + ", não 4. Faltou somar 1?")
+
 
 # --- ✏️ MONTAR ---
 # Escreva comer(c): a fome cai 3, mas nunca
@@ -47,14 +52,15 @@ assert c["hunger"] == 4, (
 def comer(c):
     pass
 
+
 c["hunger"] = 5
 comer(c)
-assert c["hunger"] == 2, ("Com fome 5, comer deixou "
-    + str(c["hunger"]) + ", não 2. Faltou tirar 3?")
+assert c["hunger"] == 2, (
+    "Após comer: " + str(c["hunger"]) + ", não 2. Tirou 3?")
 c["hunger"] = 1
 comer(c)
-assert c["hunger"] == 0, ("Com fome 1, comer deixou "
-    + str(c["hunger"]) + ", não 0. Fome não fica negativa.")
+assert c["hunger"] == 0, (
+    "Ficou " + str(c["hunger"]) + ": fome não é negativa.")
 
 desenhar(c)
 print("✅ Aula concluída!")

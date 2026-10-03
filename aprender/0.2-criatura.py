@@ -19,8 +19,8 @@ print("Vida da criatura:", c["health"])
 
 
 assert c["x"] == 3, (
-    "x deveria ser 3, mas está " + str(c["x"])
-    + ". Some 2 em c[\"x\"].")
+    "x deveria ser 3, mas está " + str(c["x"]) + ". Some "
+    "2 em c[\"x\"].")
 
 # --- ✏️ MONTAR ---
 # Crie a criatura "outra": coluna 5, linha 1,
@@ -28,8 +28,8 @@ assert c["x"] == 3, (
 outra = None
 
 assert outra is not None, (
-    "Troque o None da seção MONTAR por um "
-    "dicionário, igual ao c lá em cima.")
+    "Troque o None da seção MONTAR por um dicionário, "
+    "igual ao c lá em cima.")
 for chave in ["x", "y", "hunger", "health"]:
     assert chave in outra, (
         "Faltou a chave \"" + chave + "\" em outra.")

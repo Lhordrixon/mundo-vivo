@@ -27,6 +27,7 @@ Na dúvida, trate como falha da aula e acrescente uma linha no "⚠️ Não func
 ## Ao corrigir uma aula
 
 - Mexa só no que for preciso, seguindo as regras das aulas no `CLAUDE.md` e o formato das outras aulas.
+- Nos `.py`, siga a PEP 8: classes com o nome do Java, métodos e variáveis em `snake_case`. O `verificar.py` confere.
 - Acrescente uma entrada no topo da lista de `aprender/CORRECOES.md`: data, aula, trava, correção.
 - Rode `python3 aprender/verificar.py`. Se falhar, conserte até passar. Se não conseguir, desfaça a mudança e diga isso na resposta.
 - Você não faz commit. O workflow faz depois:

@@ -15,8 +15,8 @@ print("~ água   . terra   o criatura")
 minha_letra = None
 
 assert minha_letra is not None, (
-    "Troque o None da seção MUDAR por uma letra "
-    "entre aspas, como \"B\".")
+    "Troque o None da seção MUDAR por uma letra entre "
+    "aspas, como \"B\".")
 print("Sua letra:", minha_letra)
 
 # --- ✏️ MONTAR ---
@@ -25,9 +25,8 @@ print("Sua letra:", minha_letra)
 linha_do_meio = None
 
 assert linha_do_meio == "~ . " + minha_letra + " . ~", (
-    "A linha do meio deveria ser  ~ . "
-    + minha_letra + " . ~  (com os espaços). "
-    "Junte os pedaços com +.")
+    "A linha do meio deveria ser  ~ . " + minha_letra + " "
+    ". ~  (com os espaços). Junte os pedaços com +.")
 
 # --- Final: o mapa com você no meio ---
 print("~ ~ ~ ~ ~")

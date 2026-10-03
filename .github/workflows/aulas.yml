@@ -28,7 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar o pycodestyle (PEP 8)
+        run: python3 -m pip install --quiet pycodestyle
+
       - name: Conferir as aulas
+        env:
+          EXIGIR_PEP8: '1'
         run: python3 aprender/verificar.py 2>&1 | tee verificacao.txt; exit "${PIPESTATUS[0]}"
 
       - name: Abrir a issue aula-quebrada
