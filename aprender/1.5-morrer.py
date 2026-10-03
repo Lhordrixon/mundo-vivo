@@ -35,9 +35,8 @@ assert alvo.apply_damage(golpe), (
     "Com golpe " + str(golpe) + ", o alvo ficou com "
     + str(round(alvo.health, 2)) + " de vida.")
 
+
 # --- ✏️ MONTAR ---
-
-
 def step(creatures, damage):
     # ✏️ Este for pula criaturas quando alguém sai
     # da lista. Troque por um for que vá do fim

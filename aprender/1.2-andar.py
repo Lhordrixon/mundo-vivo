@@ -31,10 +31,9 @@ def move_toward(c, target_x, target_y, dt):
             c.y + dy / distance * stride)
     return False
 
+
 # Desenha a faixa e, embaixo, a criatura.
 # " " * 5 são 5 espaços: empurra o "o" até o x.
-
-
 def desenhar(c):
     print(mapa[0])
     print(" " * int(c.x) + "o", " x =", round(c.x, 1))

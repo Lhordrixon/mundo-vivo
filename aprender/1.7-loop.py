@@ -2,10 +2,10 @@
 # Guia da aula: 1.7-loop.md
 
 regrowth_per_second = 1.0   # ✏️ MUDAR (abaixo)
+
+
 # Aqui a comida é uma só, para o mundo todo.
 # No jogo, cada tile tem a sua (aula 1.4).
-
-
 class Creature:
     def __init__(self):
         self.hunger = 0.3

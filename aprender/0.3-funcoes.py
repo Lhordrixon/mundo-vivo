@@ -33,11 +33,10 @@ desenhar(c)
 andar_direita(c)
 desenhar(c)
 
+
 # --- ✏️ MUDAR ---
 # Quando o tempo passa, a fome sobe 1.
 # Troque o pass pela linha que faz isso.
-
-
 def passar_tempo(c):
     pass
 
@@ -46,11 +45,10 @@ passar_tempo(c)
 assert c["hunger"] == 4, (
     "Fome " + str(c["hunger"]) + ", não 4. Faltou somar 1?")
 
+
 # --- ✏️ MONTAR ---
 # Escreva comer(c): a fome cai 3, mas nunca
 # fica menor que 0. Use um if.
-
-
 def comer(c):
     pass
 

@@ -8,10 +8,9 @@ b = {"x": 4, "y": 1, "hungre": 3}  # digitei errado!
 # Só quebra depois, quando alguém pedir
 # b["hunger"].
 
+
 # --- Depois: com uma classe ---
 # A classe é o molde. Toda criatura sai igual.
-
-
 class Creature:
     def __init__(self, x, y):   # roda ao nascer
         self.x = x

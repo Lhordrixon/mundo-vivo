@@ -39,11 +39,10 @@ for estado in cores:    # cada chave do dicionário
 print("A sua cor:")
 barras(nova)
 
+
 # --- ✏️ MONTAR ---
 # Escreva para_java(cor). Ela devolve o texto
 # Java da cor: new Color(0.3f, 0.5f, 1.0f, 1f)
-
-
 def para_java(cor):
     return None
 

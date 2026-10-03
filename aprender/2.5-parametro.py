@@ -29,11 +29,10 @@ assert abs(nova - 3 * speed_tiles_per_second) < 0.2, (
     "2.2?")
 corrida(nova)
 
+
 # --- ✏️ MONTAR ---
 # Escreva tempo_para_atravessar: quantos segundos
 # para andar `largura` tiles nessa velocidade.
-
-
 def tempo_para_atravessar(largura, velocidade):
     return None
 

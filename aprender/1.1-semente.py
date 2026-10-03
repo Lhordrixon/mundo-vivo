@@ -2,11 +2,10 @@
 # Guia da aula: 1.1-semente.md
 import random
 
+
 # --- Exemplo pronto: leia e rode ---
 # classify: a mesma ideia do WorldGenerator.
 # Recebe uma altura de 0 a 1 e diz o tile.
-
-
 def classify(elevation, sea_level):
     if elevation < sea_level:
         return "~"          # água
