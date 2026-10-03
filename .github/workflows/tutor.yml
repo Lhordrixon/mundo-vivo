@@ -92,6 +92,23 @@ jobs:
       - name: Instalar o pycodestyle (PEP 8, usado pelo verificar.py)
         run: python3 -m pip install --quiet pycodestyle
 
+      # A resposta automática (ajuda.yml) chega primeiro; o tutor espera
+      # por ela até 2 minutos para não repetir o que ela já disse.
+      - name: Esperar a resposta automática
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMERO: ${{ github.event.issue.number }}
+        run: |
+          for i in $(seq 1 12); do
+            if gh api "repos/$GITHUB_REPOSITORY/issues/$NUMERO/comments" \
+                --jq '.[].body' | grep -q '<!-- ajuda -->'; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Sem resposta automática; o tutor segue sozinho."
+
       - name: Preparar a conversa
         env:
           GH_TOKEN: ${{ github.token }}
