@@ -11,8 +11,8 @@
  ],
  "0.1-mapa": [
   [
-   "# coluna 4. Escreva a linha logo abaixo:\n\n",
-   "# coluna 4. Escreva a linha logo abaixo:\nmapa[2][4] = \"o\"\n"
+   "...\n",
+   "mapa[2][4] = \"o\"\n"
   ],
   [
    "agua = 0\n\n",
@@ -21,8 +21,8 @@
  ],
  "0.2-criatura": [
   [
-   "# o x aumenta 2. Escreva a linha abaixo:\n\n",
-   "# o x aumenta 2. Escreva a linha abaixo:\nc[\"x\"] = c[\"x\"] + 2\n"
+   "...\n",
+   "c[\"x\"] = c[\"x\"] + 2\n"
   ],
   [
    "outra = None\n",
@@ -41,38 +41,38 @@
  ],
  "0.4-classe": [
   [
-   "# ponha na lista com append. Escreva abaixo:\n\n",
-   "# ponha na lista com append. Escreva abaixo:\ncriaturas.append(Creature(5, 1))\n"
+   "...\n",
+   "criaturas.append(Creature(5, 1))\n"
   ],
   [
-   "        pass   # ✏️ MONTAR: troque este pass\n",
+   "        pass\n",
    "        self.hunger = self.hunger - 3\n        if self.hunger < 0:\n            self.hunger = 0\n"
   ]
  ],
  "1.1-semente": [
   [
-   "sea_level = 0.34   # ✏️ MUDAR (veja abaixo)\n",
-   "sea_level = 0.6   # ✏️ MUDAR (veja abaixo)\n"
+   "sea_level = 0.34\n",
+   "sea_level = 0.6\n"
   ],
   [
-   "    # elevation < sea_level + 0.05, devolva \",\"\n",
-   "    # elevation < sea_level + 0.05, devolva \",\"\n    if elevation < sea_level + 0.05:\n        return \",\"\n"
+   "    # (escreva o if aqui)\n",
+   "    if elevation < sea_level + 0.05:\n        return \",\"\n"
   ]
  ],
  "1.2-andar": [
   [
-   "speed_tiles_per_second = 2.2      # ✏️ MUDAR (abaixo)\n",
-   "speed_tiles_per_second = 4.4      # ✏️ MUDAR (abaixo)\n"
+   "speed_tiles_per_second = 2.2\n",
+   "speed_tiles_per_second = 4.4\n"
   ],
   [
-   "    # use return antes de mudar c.x e c.y.\n",
-   "    # use return antes de mudar c.x e c.y.\n    if mapa[int(y)][int(x)] == \"~\":\n        return\n"
+   "    # (escreva o if aqui)\n",
+   "    if mapa[int(y)][int(x)] == \"~\":\n        return\n"
   ]
  ],
  "1.3-fome": [
   [
-   "hunger_seek_threshold = 0.42   # ✏️ MUDAR (abaixo)\n",
-   "hunger_seek_threshold = 0.2   # ✏️ MUDAR (abaixo)\n"
+   "hunger_seek_threshold = 0.42\n",
+   "hunger_seek_threshold = 0.2\n"
   ],
   [
    "    return \"?\"\n",
@@ -82,11 +82,11 @@
  "1.4-comer": [
   [
    "indice = None\n",
-   "indice = food.index(5, 2)\n"
+   "indice = food.index(7, 1)\n"
   ],
   [
-   "        # delta_seconds, sem passar de capacity[i].\n        pass\n",
-   "        # delta_seconds, sem passar de capacity[i].\n        rate = regrowth_per_second * delta_seconds\n        for i in range(len(self.amount)):\n            novo = self.amount[i] + self.capacity[i] * rate\n            self.amount[i] = min(self.capacity[i], novo)\n"
+   "        pass\n",
+   "        rate = regrowth_per_second * delta_seconds\n        for i in range(len(self.amount)):\n            novo = self.amount[i] + self.capacity[i] * rate\n            self.amount[i] = min(self.capacity[i], novo)\n"
   ]
  ],
  "1.5-morrer": [
@@ -101,8 +101,8 @@
  ],
  "1.6-reproduzir": [
   [
-   "bia = Creature(\"B\", 2.8, 10)   # ✏️ MUDAR: a idade\n",
-   "bia = Creature(\"B\", 2.8, 25)   # ✏️ MUDAR: a idade\n"
+   "bia = Creature(\"B\", 2.8, 10)\n",
+   "bia = Creature(\"B\", 2.8, 25)\n"
   ],
   [
    "        return False\n",
@@ -111,12 +111,12 @@
  ],
  "1.7-loop": [
   [
-   "regrowth_per_second = 1.0   # ✏️ MUDAR (abaixo)\n",
-   "regrowth_per_second = 0.5   # ✏️ MUDAR (abaixo)\n"
+   "regrowth_per_second = 1.0\n",
+   "regrowth_per_second = 0.5\n"
   ],
   [
-   "        # criatura, do fim da lista para o começo.\n        pass\n",
-   "        # criatura, do fim da lista para o começo.\n        self.regrow(dt)\n        for i in range(len(self.creatures) - 1, -1, -1):\n            self.step_creature(i, dt)\n"
+   "        pass\n",
+   "        self.regrow(dt)\n        for i in range(len(self.creatures) - 1, -1, -1):\n            self.step_creature(i, dt)\n"
   ]
  ],
  "2.1-ler-java": [

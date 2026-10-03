@@ -2,6 +2,7 @@
 # Guia da aula: 0.0-preparar.md
 
 # --- Exemplo pronto: só rode ---
+# 1. Mostrar: cada print escreve uma linha.
 print("Olá! Eu sou o Mundo Vivo.")
 print("~ ~ ~ ~ ~")
 print("~ . o . ~")
@@ -9,26 +10,28 @@ print("~ ~ ~ ~ ~")
 print("~ água   . terra   o criatura")
 
 # --- ✏️ MUDAR ---
-# Escolha uma letra para ser você no mapa.
-# Troque o None pela letra, entre aspas.
-# Exemplo: minha_letra = "B"
+# ✏️ Sua vez: troque o None (quer dizer "nada
+# ainda") por uma letra entre aspas, como "B".
 minha_letra = None
 
+# Conferir
 assert minha_letra is not None, (
-    "Troque o None da seção MUDAR por uma letra entre "
-    "aspas, como \"B\".")
+    "Ainda é None: falta a sua letra. Olhe a linha "
+    "minha_letra. Tente \"B\", com aspas.")
 print("Sua letra:", minha_letra)
 
 # --- ✏️ MONTAR ---
-# Monte a linha do meio do mapa com a sua
-# letra no lugar do "o". Junte textos com +.
+# ✏️ Sua vez: monte a linha do meio do mapa, com
+# a sua letra no lugar do "o". Junte textos com +.
 linha_do_meio = None
 
+# Conferir
 assert linha_do_meio == "~ . " + minha_letra + " . ~", (
-    "A linha do meio deveria ser  ~ . " + minha_letra + " "
-    ". ~  (com os espaços). Junte os pedaços com +.")
+    "Ficou " + str(linha_do_meio) + ". O certo é ~ . "
+    + minha_letra + " . ~, com espaços. Junte com +.")
 
 # --- Final: o mapa com você no meio ---
+# 1. Mostrar
 print("~ ~ ~ ~ ~")
 print(linha_do_meio)
 print("~ ~ ~ ~ ~")

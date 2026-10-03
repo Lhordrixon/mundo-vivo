@@ -21,7 +21,7 @@ print("Tiles andados em 10 segundos:")
 corrida(speed_tiles_per_second)
 
 # --- ✏️ MUDAR ---
-# Escolha uma velocidade 3 vezes maior.
+# ✏️ Sua vez: uma velocidade 3 vezes maior.
 nova = None
 assert nova is not None, "Troque o None da nova."
 assert abs(nova - 3 * speed_tiles_per_second) < 0.2, (
@@ -31,8 +31,8 @@ corrida(nova)
 
 
 # --- ✏️ MONTAR ---
-# Escreva tempo_para_atravessar: quantos segundos
-# para andar `largura` tiles nessa velocidade.
+# ✏️ Sua vez: tempo_para_atravessar devolve os
+# segundos para andar `largura` tiles.
 def tempo_para_atravessar(largura, velocidade):
     return None
 
@@ -46,5 +46,5 @@ print("Atravessar o mundo hoje:", round(hoje), "s")
 print("Com a nova velocidade:", round(depois), "s")
 print("A linha nova do Java:")
 print("public float speedTilesPerSecond = "
-      + str(nova) + "f;")
+      + str(round(nova, 2)) + "f;")
 print("✅ Aula concluída!")
