@@ -1,5 +1,7 @@
 # 👉 Aprender e contribuir
 
+🧭 **[Sua trilha: marque cada aula na issue #12](https://github.com/Lhordrixon/mundo-vivo/issues/12)**
+
 Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java de verdade e termina com o seu primeiro pull request.
 
 **Cores:** círculo = nível · quadrado = aula da mesma cor · cada cor é um degrau.
