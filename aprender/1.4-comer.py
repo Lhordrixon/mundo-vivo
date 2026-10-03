@@ -1,7 +1,8 @@
 # Aula 9 de 17 · 1.4 Comer
 # Guia da aula: 1.4-comer.md
 
-regrowthPerSecond = 0.1   # no jogo é 0.003
+regrowth_per_second = 0.1   # no jogo é 0.003
+
 
 class FoodMap:
     def __init__(self, width, height):
@@ -21,11 +22,12 @@ class FoodMap:
         self.amount[index] = available - taken
         return taken
 
-    def regrow(self, deltaSeconds):
+    def regrow(self, delta_seconds):
         # ✏️ MONTAR: para cada índice i, a comida
-        # cresce capacity[i] * regrowthPerSecond *
-        # deltaSeconds, sem passar de capacity[i].
+        # cresce capacity[i] * regrowth_per_second *
+        # delta_seconds, sem passar de capacity[i].
         pass
+
 
 def desenhar(food):
     for y in range(food.height):
@@ -35,6 +37,7 @@ def desenhar(food):
             texto = texto + str(int(nivel * 9))
         print(texto)
     print("9 cheio ... 0 vazio")
+
 
 # --- Exemplo pronto: comer no tile (2, 1) ---
 food = FoodMap(12, 3)
@@ -47,15 +50,14 @@ desenhar(food)
 # A criatura foi para o tile (5, 2). Troque o
 # None pelo índice desse tile.
 indice = None
-assert indice == 29, ("O índice de (5, 2) é y * "
-    "width + x, mas está " + str(indice) + ".")
+assert indice == 29, (
+    "(5, 2) é y * width + x, não " + str(indice) + ".")
 food.consume(indice, 1.0)
 
 # --- ✏️ MONTAR ---
 food.regrow(5)    # 5 segundos de rebrota
-assert abs(food.amount[i] - 0.5) < 0.01, ("Depois de "
-    "regrow(5) o tile comido devia ter 0.5, mas tem "
-    + str(round(food.amount[i], 2)))
+assert abs(food.amount[i] - 0.5) < 0.01, (
+    "Devia ser 0.5, é " + str(round(food.amount[i], 2)))
 assert food.amount[0] <= 1.0, "Passou de 1.0: use min."
 desenhar(food)
 print("✅ Aula concluída!")

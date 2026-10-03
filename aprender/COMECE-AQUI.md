@@ -43,4 +43,14 @@ Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java d
 
 </details>
 
+<details><summary>🙈 Arquivos para ignorar por enquanto</summary>
+
+- `gradlew`: o comando que monta o jogo no PC; o GitHub roda ele por você.
+- `gradle/`: as peças que o `gradlew` usa para funcionar.
+- `build.gradle`: a receita do jogo, com as bibliotecas e as versões.
+- `settings.gradle`: a lista das partes do projeto (`core`, `android`, `desktop`).
+- `.github/`: os robôs do GitHub, que testam, montam o APK e cuidam das dúvidas.
+
+</details>
+
 ### ➡️ [Começar: aula 0.0](0.0-preparar.md)

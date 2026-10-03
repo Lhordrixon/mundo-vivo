@@ -51,18 +51,18 @@
  ],
  "1.1-semente": [
   [
-   "seaLevel = 0.34   # ✏️ MUDAR (veja abaixo)\n",
-   "seaLevel = 0.6   # ✏️ MUDAR (veja abaixo)\n"
+   "sea_level = 0.34   # ✏️ MUDAR (veja abaixo)\n",
+   "sea_level = 0.6   # ✏️ MUDAR (veja abaixo)\n"
   ],
   [
-   "    # elevation < seaLevel + 0.05, devolva \",\"\n",
-   "    # elevation < seaLevel + 0.05, devolva \",\"\n    if elevation < seaLevel + 0.05:\n        return \",\"\n"
+   "    # elevation < sea_level + 0.05, devolva \",\"\n",
+   "    # elevation < sea_level + 0.05, devolva \",\"\n    if elevation < sea_level + 0.05:\n        return \",\"\n"
   ]
  ],
  "1.2-andar": [
   [
-   "speedTilesPerSecond = 2.2      # ✏️ MUDAR (abaixo)\n",
-   "speedTilesPerSecond = 4.4      # ✏️ MUDAR (abaixo)\n"
+   "speed_tiles_per_second = 2.2      # ✏️ MUDAR (abaixo)\n",
+   "speed_tiles_per_second = 4.4      # ✏️ MUDAR (abaixo)\n"
   ],
   [
    "    # use return antes de mudar c.x e c.y.\n",
@@ -71,8 +71,8 @@
  ],
  "1.3-fome": [
   [
-   "hungerSeekThreshold = 0.42   # ✏️ MUDAR (abaixo)\n",
-   "hungerSeekThreshold = 0.2   # ✏️ MUDAR (abaixo)\n"
+   "hunger_seek_threshold = 0.42   # ✏️ MUDAR (abaixo)\n",
+   "hunger_seek_threshold = 0.2   # ✏️ MUDAR (abaixo)\n"
   ],
   [
    "    return \"?\"\n",
@@ -85,8 +85,8 @@
    "indice = food.index(5, 2)\n"
   ],
   [
-   "        # deltaSeconds, sem passar de capacity[i].\n        pass\n",
-   "        # deltaSeconds, sem passar de capacity[i].\n        rate = regrowthPerSecond * deltaSeconds\n        for i in range(len(self.amount)):\n            novo = self.amount[i] + self.capacity[i] * rate\n            self.amount[i] = min(self.capacity[i], novo)\n"
+   "        # delta_seconds, sem passar de capacity[i].\n        pass\n",
+   "        # delta_seconds, sem passar de capacity[i].\n        rate = regrowth_per_second * delta_seconds\n        for i in range(len(self.amount)):\n            novo = self.amount[i] + self.capacity[i] * rate\n            self.amount[i] = min(self.capacity[i], novo)\n"
   ]
  ],
  "1.5-morrer": [
@@ -95,8 +95,8 @@
    "golpe = 0.5\n"
   ],
   [
-   "    for c in creatures:\n        if c.applyDamage(damage):\n            creatures.remove(c)    # die: sai da lista\n",
-   "    for i in range(len(creatures) - 1, -1, -1):\n        c = creatures[i]\n        if c.applyDamage(damage):\n            creatures.pop(i)    # die\n"
+   "    for c in creatures:\n        if c.apply_damage(damage):\n            creatures.remove(c)    # die: sai da lista\n",
+   "    for i in range(len(creatures) - 1, -1, -1):\n        c = creatures[i]\n        if c.apply_damage(damage):\n            creatures.pop(i)    # die\n"
   ]
  ],
  "1.6-reproduzir": [
@@ -106,27 +106,27 @@
   ],
   [
    "        return False\n",
-   "        return (self.age >= adultAgeSeconds\n                and self.reproductionCooldown <= 0\n                and self.hunger <= reproductionHungerMax\n                and self.health > 0.5)\n"
+   "        return (self.age >= adult_age_seconds\n                and self.reproduction_cooldown <= 0\n                and self.hunger <= reproduction_hunger_max\n                and self.health > 0.5)\n"
   ]
  ],
  "1.7-loop": [
   [
-   "regrowthPerSecond = 1.0   # ✏️ MUDAR (abaixo)\n",
-   "regrowthPerSecond = 0.5   # ✏️ MUDAR (abaixo)\n"
+   "regrowth_per_second = 1.0   # ✏️ MUDAR (abaixo)\n",
+   "regrowth_per_second = 0.5   # ✏️ MUDAR (abaixo)\n"
   ],
   [
    "        # criatura, do fim da lista para o começo.\n        pass\n",
-   "        # criatura, do fim da lista para o começo.\n        self.regrow(dt)\n        for i in range(len(self.creatures) - 1, -1, -1):\n            self.stepCreature(i, dt)\n"
+   "        # criatura, do fim da lista para o começo.\n        self.regrow(dt)\n        for i in range(len(self.creatures) - 1, -1, -1):\n            self.step_creature(i, dt)\n"
   ]
  ],
  "2.1-ler-java": [
   [
-   "targetY = None\n",
-   "targetY = tile // width + 0.5\n"
+   "target_y = None\n",
+   "target_y = tile // width + 0.5\n"
   ],
   [
-   "def inBounds(x, y):\n    return None\n",
-   "def inBounds(x, y):\n    return x >= 0 and y >= 0 and x < width and y < height\n"
+   "def in_bounds(x, y):\n    return None\n",
+   "def in_bounds(x, y):\n    return x >= 0 and y >= 0 and x < width and y < height\n"
   ]
  ],
  "2.2-pr-celular": [
@@ -155,8 +155,8 @@
    "nova = [0.3, 0.5, 1.0]\n"
   ],
   [
-   "def paraJava(cor):\n    return None\n",
-   "def paraJava(cor):\n    return (\"new Color(\" + str(cor[0]) + \"f, \"\n            + str(cor[1]) + \"f, \" + str(cor[2])\n            + \"f, 1f)\")\n"
+   "def para_java(cor):\n    return None\n",
+   "def para_java(cor):\n    return (\"new Color(\" + str(cor[0]) + \"f, \"\n            + str(cor[1]) + \"f, \" + str(cor[2])\n            + \"f, 1f)\")\n"
   ]
  ],
  "2.5-parametro": [
@@ -165,8 +165,8 @@
    "nova = 6.6\n"
   ],
   [
-   "def tempoParaAtravessar(largura, velocidade):\n    return None\n",
-   "def tempoParaAtravessar(largura, velocidade):\n    return largura / velocidade\n"
+   "def tempo_para_atravessar(largura, velocidade):\n    return None\n",
+   "def tempo_para_atravessar(largura, velocidade):\n    return largura / velocidade\n"
   ]
  ]
 }

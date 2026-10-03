@@ -10,10 +10,12 @@ cores = {
     "SEEKING_MATE": [1.00, 0.45, 0.70],  # rosa
 }
 
+
 def barras(cor):
     nomes = ["R", "G", "B"]
     for i in range(3):
         print(nomes[i], "#" * int(cor[i] * 20), cor[i])
+
 
 # --- Exemplo pronto: o rosa de SEEKING_MATE ---
 print("A cor de hoje:")
@@ -31,21 +33,25 @@ for estado in cores:    # cada chave do dicionário
     diferenca = (abs(nova[0] - atual[0])
                  + abs(nova[1] - atual[1])
                  + abs(nova[2] - atual[2]))
-    assert diferenca > 0.4, ("Sua cor ficou parecida"
-        " demais com a de " + estado + ".")
+    assert diferenca > 0.4, (
+        "Sua cor ficou parecida demais com a de " + estado
+        + ".")
 print("A sua cor:")
 barras(nova)
 
 # --- ✏️ MONTAR ---
-# Escreva paraJava(cor). Ela devolve o texto
+# Escreva para_java(cor). Ela devolve o texto
 # Java da cor: new Color(0.3f, 0.5f, 1.0f, 1f)
-def paraJava(cor):
+
+
+def para_java(cor):
     return None
 
-texto = paraJava([0.3, 0.5, 1.0])
+
+texto = para_java([0.3, 0.5, 1.0])
 assert texto == "new Color(0.3f, 0.5f, 1.0f, 1f)", (
-    "paraJava deu " + str(texto) + ". Junte com + e "
+    "para_java deu " + str(texto) + ". Junte com + e "
     "str(), e ponha f depois de cada número.")
 print("Cole isto no CreatureRenderer.java:")
-print(paraJava(nova))
+print(para_java(nova))
 print("✅ Aula concluída!")

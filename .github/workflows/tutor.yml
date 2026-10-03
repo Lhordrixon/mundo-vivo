@@ -85,6 +85,13 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar o pycodestyle (PEP 8, usado pelo verificar.py)
+        run: python3 -m pip install --quiet pycodestyle
+
       - name: Preparar a conversa
         env:
           GH_TOKEN: ${{ github.token }}
