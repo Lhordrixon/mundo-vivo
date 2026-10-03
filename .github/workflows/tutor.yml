@@ -2,13 +2,11 @@ name: Tutor
 
 # O tutor das aulas: Claude Code (anthropics/claude-code-action) segue
 # aprender/TUTOR.md. Acorda com:
-# - issue com o rótulo "duvida" (aberta ou rotulada) e respostas nela;
+# - issue que recebe o rótulo "duvida" (o modelo já põe) e respostas nela;
 # - "@claude" num comentário de issue ou PR;
 # - falha do workflow "Aulas" na main (issue "aula-quebrada").
 #
 # Só atende wrgw34wg3gghw3g e Lhordrixon, para proteger a cota.
-# TESTE: Lhordriyon (a conta do Claude) liberada só durante a prova de
-# funcionamento; sai no PR seguinte.
 #
 # Autentica pela assinatura do Claude: precisa do segredo
 # CLAUDE_CODE_OAUTH_TOKEN (gerado com `claude setup-token`). Sem ele, o
@@ -21,8 +19,10 @@ name: Tutor
 #   direto na main;
 # - qualquer outra mudança → PR para o dono revisar.
 on:
+  # Só "labeled": uma issue aberta pelo modelo de dúvida já dispara
+  # "labeled", e ouvir "opened" também faria o tutor responder duas vezes.
   issues:
-    types: [opened, labeled]
+    types: [labeled]
   issue_comment:
     types: [created]
   workflow_run:
@@ -46,10 +46,8 @@ jobs:
         github.event.workflow_run.head_branch == 'main' &&
         github.event.workflow_run.event == 'push') ||
       (github.event_name != 'workflow_run' &&
-        contains(fromJSON('["wrgw34wg3gghw3g","Lhordrixon","Lhordriyon"]'), github.event.sender.login) &&
-        ((github.event_name == 'issues' && github.event.action == 'opened' &&
-            contains(github.event.issue.labels.*.name, 'duvida')) ||
-         (github.event_name == 'issues' && github.event.action == 'labeled' &&
+        contains(fromJSON('["wrgw34wg3gghw3g","Lhordrixon"]'), github.event.sender.login) &&
+        ((github.event_name == 'issues' && github.event.action == 'labeled' &&
             github.event.label.name == 'duvida') ||
          (github.event_name == 'issue_comment' &&
             (contains(github.event.issue.labels.*.name, 'duvida') ||
