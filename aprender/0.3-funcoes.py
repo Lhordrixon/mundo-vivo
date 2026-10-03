@@ -17,7 +17,10 @@ def desenhar(c):
             texto = texto + tile + " "
         print(texto)
     print("~ água  . terra  o criatura")
-    print("fome:", c["hunger"])
+    print("fome:", c["hunger"], "com fome?", com_fome(c))
+
+def com_fome(c):
+    return c["hunger"] >= 5   # devolve True ou False
 
 def andar_direita(c):
     c["x"] = c["x"] + 1
