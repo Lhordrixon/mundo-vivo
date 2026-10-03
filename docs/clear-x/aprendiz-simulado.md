@@ -82,3 +82,31 @@ Defeitos e correções:
 
 Não testável daqui: o Gradle com o plugin Android (o `core:test` com 6.6
 foi medido antes, 115 testes verdes) e qualquer botão real do GitHub.
+
+## Rodada 2 · 03/10/2026 · Fase C (provas N0, N1, N2)
+
+Acertou tudo de primeira. O problema era o contrário: respostas erradas
+também passavam. Defeitos e correções:
+
+- N0 item 3 aceitava `if` invertido e `+1.5` → confere depois de cada
+  chamada (4, 6, 7) e mostra o valor.
+- N1 item 2 aceitava estado fixo, limite errado e `dt` ignorado →
+  passos de 2 s, confere bateria e estado a cada passo.
+- N1 item 3 não tinha idade 3 (`>= 3` passava) → lista com 3 e 7; dica
+  pede para mudar a própria lista.
+- N1 item 4 tinha duas ordens válidas → o enunciado diz que a comida
+  cresce primeiro.
+- O recuo entregava a ordem dos Parsons → linhas sem recuo; N0 ganhou
+  uma 4ª linha (`c = Creature()`).
+- N2: "outra cara" igual ao Montar da 2.1 → `metade(int n)` com `//`;
+  "a regra muda" era só lembrança → regra nova com `||`; Parsons novo;
+  variações aceitas no item 4 (`double`, `public`, `static`).
+- "Passou de primeira?" era vago → "os itens certos sem abrir as
+  respostas".
+- N0 perguntava onde a classe aparece no jogo (não ensinado) → pergunta
+  pelo `self`.
+- `verificar.py provas/N2` quebrava → avisa que o `.md` é conferido sem
+  argumentos.
+
+Teste adversarial (script): `if` invertido, `+1.5`, estado fixo, sem
+`dt`, limite 0.5 e `>= 3` agora falham.

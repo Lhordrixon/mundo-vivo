@@ -13,6 +13,7 @@ Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java d
 - ⬜ [0.2 A criatura é um dicionário](0.2-criatura.md)
 - ⬜ [0.3 Funções que mudam a criatura](0.3-funcoes.md)
 - ⬜ [0.4 Muitas criaturas: por que classe](0.4-classe.md)
+- 🧪 Já sabe isso? Rode a [Prova N0](provas/N0.py): passou, pode pular.
 
 <details><summary>🟡 <b>Nível 1 · O mundo em Python</b></summary>
 
@@ -23,6 +24,7 @@ Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java d
 - 🟨 [1.5 Morrer](1.5-morrer.md)
 - 🟨 [1.6 Reproduzir](1.6-reproduzir.md)
 - 🟨 [1.7 O loop do mundo](1.7-loop.md)
+- 🧪 Já sabe isso? Rode a [Prova N1](provas/N1.py): passou, pode pular.
 
 </details>
 
@@ -33,6 +35,7 @@ Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java d
 - 🟩 [2.3 Primeiro PR pelo PC](2.3-pr-pc.md)
 - 🟩 [2.4 Mudar uma cor e ver no APK](2.4-cor.md)
 - 🟩 [2.5 Mudar um parâmetro e ver no APK](2.5-parametro.md)
+- 🧪 Já sabe isso? Faça a [Prova N2](provas/N2.md): passou, pode pular.
 
 </details>
 

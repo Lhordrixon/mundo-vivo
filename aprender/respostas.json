@@ -168,5 +168,41 @@
    "def tempo_para_atravessar(largura, velocidade):\n    return None\n",
    "def tempo_para_atravessar(largura, velocidade):\n    return largura / velocidade\n"
   ]
+ ],
+ "provas/N0": [
+  [
+   "...\n",
+   "mapa[1][2] = \"o\"\n"
+  ],
+  [
+   "def usar(cel):\n    pass\n",
+   "def usar(cel):\n    cel[\"bateria\"] = max(0, cel[\"bateria\"] - 30)\n"
+  ],
+  [
+   "def passar_tempo(c, frio):\n    pass\n",
+   "def passar_tempo(c, frio):\n    if frio:\n        c[\"hunger\"] = c[\"hunger\"] + 2\n    else:\n        c[\"hunger\"] = c[\"hunger\"] + 1\n"
+  ],
+  [
+   "ordem = None\n",
+   "ordem = [3, 4, 1, 2]\n"
+  ]
+ ],
+ "provas/N1": [
+  [
+   "indice = None\n",
+   "indice = 2 * width + 3\n"
+  ],
+  [
+   "    def step(self, dt):\n        pass\n",
+   "    def step(self, dt):\n        self.bateria -= 0.1 * dt\n        if self.bateria < 0.3:\n            self.state = \"CARREGANDO\"\n"
+  ],
+  [
+   "def jogar_fora(idades):\n    pass\n",
+   "def jogar_fora(idades):\n    for i in range(len(idades) - 1, -1, -1):\n        if idades[i] > 3:\n            idades.pop(i)\n"
+  ],
+  [
+   "ordem = None\n",
+   "ordem = [2, 3, 1]\n"
+  ]
  ]
 }
