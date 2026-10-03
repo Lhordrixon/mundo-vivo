@@ -22,15 +22,16 @@ for numero in [1, 2, 3, 4]:
     print("    git:", comandos[numero])
 
 # --- ✏️ MUDAR ---
-# Qual número envia a sua branch para o GitHub?
+# ✏️ Sua vez: qual número envia a sua branch
+# para o GitHub?
 envia = None
 assert envia == 2, (
     "Enviar para o GitHub é o push. Qual número tem git "
     "push?")
 
 # --- ✏️ MONTAR ---
-# Ponha os 4 números na ordem em que você usa,
-# numa lista. Exemplo de formato: [2, 1, 4, 3]
+# ✏️ Sua vez: ponha os 4 números na ordem em que
+# você usa, numa lista. Formato: [2, 1, 4, 3]
 ordem = None
 assert ordem is not None, (
     "Troque o None por uma lista com os 4 números.")

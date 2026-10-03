@@ -4,7 +4,7 @@
 
 ## Por quê?
 
-<!-- Link da issue, se houver: "Resolve #12". -->
+<!-- Link da issue, se houver, numa linha nova depois deste comentário: "Resolve #" e o número da issue. -->
 
 ## Como testei?
 

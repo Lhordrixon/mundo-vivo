@@ -8,6 +8,7 @@ class Creature:
 
     def apply_damage(self, amount):
         # A porta única: todo dano passa por aqui.
+        # Decidir: dano inválido ou já morto não conta.
         if amount <= 0 or self.health <= 0:
             return False
         # max escolhe o maior: a vida não fica < 0.
@@ -16,6 +17,7 @@ class Creature:
 
 
 def mostrar(creatures):
+    # Repetir: uma barra de vida por criatura.
     for c in creatures:
         barra = "#" * int(c.health * 10)  # "#" n vezes
         print(c.name, barra, round(c.health, 2))
@@ -27,10 +29,14 @@ creatures = [Creature("a", 0.5), Creature("b", 0.1),
 mostrar(creatures)
 
 # --- ✏️ MUDAR ---
-# Que golpe mata o alvo, que tem vida 0.5?
+# ✏️ Sua vez: que golpe mata o alvo, que tem vida
+# 0.5? Troque o None por esse número.
 golpe = None
 alvo = Creature("alvo", 0.5)
-assert golpe is not None, "Troque o None do golpe."
+# Conferir
+assert golpe is not None, (
+    "golpe ainda é None: o dano é um número. Olhe a "
+    "linha golpe e tente um número de 0 a 1.")
 assert alvo.apply_damage(golpe), (
     "Com golpe " + str(golpe) + ", o alvo ficou com "
     + str(round(alvo.health, 2)) + " de vida.")
@@ -38,9 +44,12 @@ assert alvo.apply_damage(golpe), (
 
 # --- ✏️ MONTAR ---
 def step(creatures, damage):
-    # ✏️ Este for pula criaturas quando alguém sai
-    # da lista. Troque por um for que vá do fim
-    # para o começo, usando índices.
+    # ✏️ Sua vez (MONTAR): este for pula criaturas
+    # quando alguém sai da lista. Troque por um for
+    # do fim para o começo, usando índices:
+    # range(len(creatures) - 1, -1, -1) vai do último
+    # índice até o 0; creatures.pop(i) tira a do i.
+    # Dentro do for, pegue a criatura: c = creatures[i]
     for c in creatures:
         if c.apply_damage(damage):
             creatures.remove(c)    # die: sai da lista
@@ -52,7 +61,8 @@ mostrar(creatures)
 nomes = ""
 for c in creatures:
     nomes = nomes + c.name
+# Conferir
 assert nomes == "ad", (
-    "Sobraram " + nomes + ", mas só a e d deviam sobrar: "
-    "o for pulou alguém.")
+    "Sobraram " + nomes + ", não ad: o for pulou alguém. "
+    "Olhe o for do step: vá do fim para o começo.")
 print("✅ Aula concluída!")

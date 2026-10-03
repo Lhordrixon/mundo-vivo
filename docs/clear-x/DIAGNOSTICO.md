@@ -98,6 +98,18 @@ Rótulos de evidência: FORTE, MODERADA, HIPÓTESE, METÁFORA.
 - Solução: provas N0, N1, N2 com teste de pular; revisões na #12 em
   ~2 e ~7 dias (Fase C; recuperação e espaçamento, FORTE).
 
+## Depois da Fase A (medido)
+
+- Do README ao primeiro ▶: **15 toques** (eram 19). Dentro da aula 0.0:
+  13 (eram 17). Caminho: 1 link do README, 1 "Começar", 4 para
+  instalar o Pydroid, 1 para voltar ao Chrome, 1 Raw, 3 para segurar,
+  selecionar e copiar, 1 para abrir o Pydroid, 2 para segurar e colar,
+  1 ▶. Até o primeiro ✅: 21 (eram 25).
+- Palavras visíveis por aula: mínimo 260, mediana 374, máximo 435.
+  Teto no `verificar.py`: 441, que nunca aumenta.
+- Trocas de app por aula nos níveis 0 e 1: 2, com a instrução no
+  `.py` (eram cerca de 6).
+
 ## C. Como o conhecimento é apresentado
 
 - Exemplo pronto → lacuna pequena → lacuna maior: o fading existe

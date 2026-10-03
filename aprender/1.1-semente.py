@@ -7,18 +7,22 @@ import random
 # classify: a mesma ideia do WorldGenerator.
 # Recebe uma altura de 0 a 1 e diz o tile.
 def classify(elevation, sea_level):
+    # Decidir: cada if escolhe um tile.
     if elevation < sea_level:
         return "~"          # água
-    # ✏️ MONTAR: praia logo acima do mar. Se
-    # elevation < sea_level + 0.05, devolva ","
+    # ✏️ Sua vez (MONTAR): praia logo acima do mar.
+    # Se elevation < sea_level + 0.05, devolva ","
+    # (escreva o if aqui)
     if elevation > 0.9:
         return "^"          # montanha
     return "."              # campo
 
 
 def generate(seed, width, height, sea_level):
+    # 1. Preparar
     rng = random.Random(seed)   # o sorteador
     tiles = []
+    # 2. Repetir: linha por linha, tile por tile.
     for y in range(height):
         linha = []
         for x in range(width):
@@ -29,29 +33,34 @@ def generate(seed, width, height, sea_level):
 
 
 def desenhar(tiles):
+    # 1. Repetir
     for linha in tiles:
         texto = ""
         for tile in linha:
             texto = texto + tile
         print(texto)
+    # 2. Mostrar
     print("~ água  , praia  . campo  ^ montanha")
 
 
 seed = 2026
-sea_level = 0.34   # ✏️ MUDAR (veja abaixo)
+# ✏️ Sua vez (MUDAR): deixe o mundo alagado, com
+# mais da metade água. Mude só este número.
+sea_level = 0.34
 mundo = generate(seed, 24, 8, sea_level)
 desenhar(mundo)
 outro = generate(seed, 24, 8, sea_level)
 print("Mesma semente, mesmo mapa?", mundo == outro)
 
 # --- ✏️ MUDAR ---
-# Deixe o mundo alagado: mais da metade água.
-# Mude só o número do sea_level, lá em cima.
+# A sua vez está lá em cima, no sea_level.
+# Conferir
 assert sea_level > 0.5, (
     "Pouca água ainda. O sea_level sobe ou desce?")
 
 # --- ✏️ MONTAR ---
-# Complete o classify lá em cima: a praia.
+# A sua vez está lá em cima, dentro do classify.
+# Conferir
 praia = classify(0.36, 0.34)
 assert praia == ",", (
     "0.36 é logo acima do mar, mas veio \"" + praia + "\"")

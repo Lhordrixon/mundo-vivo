@@ -17,10 +17,12 @@ class Creature:
         self.reproduction_cooldown = 0.0
 
     def can_reproduce(self):
-        # ✏️ MONTAR: devolva True só se as 4 valem:
-        # age >= adult_age_seconds, cooldown <= 0,
-        # hunger <= reproduction_hunger_max e
-        # health > 0.5. Junte as 4 com and.
+        # ✏️ Sua vez (MONTAR): devolva True só se as 4
+        # valem: self.age >= adult_age_seconds,
+        # self.reproduction_cooldown <= 0,
+        # self.hunger <= reproduction_hunger_max e
+        # self.health > 0.5. Junte as 4 com and. Linha
+        # longa? Ponha tudo entre ( ) e quebre antes do and.
         return False
 
     # Aqui, só o x conta. abs tira o sinal: -3 vira 3.
@@ -29,27 +31,35 @@ class Creature:
 
 
 def reproduce(a, b, creatures):
+    # 1. Repetir: os dois pais pagam o custo.
     for pai in [a, b]:
         pai.reproduction_cooldown = 55
         novo = pai.hunger + reproduction_hunger_cost
         pai.hunger = min(1.0, novo)
+    # 2. Atualizar: o filho entra na lista.
     creatures.append(Creature(a.name + b.name, a.x, 0))
 
 
 # --- Exemplo pronto: Ana e Bia, lado a lado ---
 ana = Creature("A", 2.0, 30)
-bia = Creature("B", 2.8, 10)   # ✏️ MUDAR: a idade
+# ✏️ Sua vez (MUDAR): a Bia ainda é jovem. Mude a
+# idade dela (o 10) para ela virar adulta.
+bia = Creature("B", 2.8, 10)
 print("Distância:", round(ana.distance_to(bia), 1))
 
 # --- ✏️ MUDAR ---
+# A sua vez está lá em cima, na idade da Bia.
+# Conferir
 assert bia.age >= adult_age_seconds, (
     "Bia tem " + str(bia.age) + " s. Adulta: 22 s ou mais.")
 
-# --- ✏️ MONTAR: complete o can_reproduce ---
+# --- ✏️ MONTAR ---
+# A sua vez está lá em cima, no can_reproduce.
 creatures = [ana, bia]
 if ana.can_reproduce() and bia.can_reproduce():
     if ana.distance_to(bia) <= mating_distance_tiles:
         reproduce(ana, bia, creatures)
+# Conferir
 assert len(creatures) == 3, (
     "Ninguém nasceu: o can_reproduce disse False.")
 assert not ana.can_reproduce(), (

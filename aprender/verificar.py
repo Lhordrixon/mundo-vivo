@@ -20,6 +20,12 @@ O que confere:
 9. PEP 8 (pycodestyle, linhas de até 60), com a lacuna vazia e com as
    respostas. Sem o pycodestyle instalado, avisa e pula; com
    EXIGIR_PEP8=1 (a CI usa), a falta dele vira erro.
+10. Toda lacuna tem a instrução "✏️ Sua vez" nos comentários logo
+    acima dela: o Alan não precisa sair do Pydroid para saber o que
+    escrever.
+11. Nenhuma aula passa de TETO_PALAVRAS palavras visíveis (fora de
+    <details> fechado). O teto é a mediana medida no diagnóstico
+    (docs/clear-x) e nunca aumenta.
 
 Só biblioteca padrão. Sai com código 1 se houver problema.
 """
@@ -34,6 +40,8 @@ import tempfile
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(AQUI)
 REPO_URL = "https://github.com/Lhordrixon/mundo-vivo/"
+# Mediana das palavras visíveis por aula em 03/10/2026. Nunca aumentar.
+TETO_PALAVRAS = 441
 
 problemas = []
 
@@ -132,6 +140,24 @@ def conferir_aula(aula, respostas, pasta_tmp):
     if not lacunas:
         problema(aula, "sem respostas em respostas.json")
         return
+
+    if md and palavras_visiveis(md) > TETO_PALAVRAS:
+        problema(aula, "o .md mostra %d palavras visíveis (teto %d). "
+                 "Leve o 'por quê' e as exceções para <details>."
+                 % (palavras_visiveis(md), TETO_PALAVRAS))
+
+    linhas_src = src.splitlines()
+    for velho, _ in lacunas:
+        if src.count(velho) != 1:
+            continue
+        n = src[:src.index(velho)].count("\n")   # linha da lacuna
+        acima = []
+        while n > 0 and linhas_src[n - 1].strip().startswith("#"):
+            acima.append(linhas_src[n - 1])
+            n -= 1
+        if not any("Sua vez" in linha for linha in acima):
+            problema(aula, "a lacuna %r não tem '✏️ Sua vez' nos "
+                     "comentários logo acima" % velho.strip()[:40])
 
     md_junto = " ".join(md.split())
     for velho, novo in lacunas:

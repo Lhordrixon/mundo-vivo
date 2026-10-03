@@ -2,9 +2,9 @@
 
 🧭 **[Sua trilha: marque cada aula na issue #12](https://github.com/Lhordrixon/mundo-vivo/issues/12)**
 
-Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java de verdade e termina com o seu primeiro pull request.
+Uma trilha curta: você aprende a lógica do jogo em Python, passa para o Java de verdade e termina com o seu primeiro [pull request](GLOSSARIO.md#pull-request). Palavra nova? Veja o [📒 Glossário](GLOSSARIO.md).
 
-**Cores:** círculo = nível · quadrado = aula da mesma cor · cada cor é um degrau.
+**Cores:** círculo = nível · quadrado = aula da mesma cor (só cor, não marca nada) · cada cor é um degrau.
 
 ⚪ **Nível 0 · Python que falta**
 

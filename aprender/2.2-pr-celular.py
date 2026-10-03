@@ -15,14 +15,14 @@ for numero in [1, 2, 3, 4, 5]:
     print(numero, passos[numero])
 
 # --- ✏️ MUDAR ---
-# Qual número é o primeiro passo de todos?
+# ✏️ Sua vez: qual número é o primeiro passo?
 primeiro = None
 assert primeiro == 3, (
     "Antes de mudar o texto, é preciso abrir o editor.")
 
 # --- ✏️ MONTAR ---
-# Ponha os 5 números na ordem certa, numa
-# lista. Exemplo de formato: [3, 1, 2, 5, 4]
+# ✏️ Sua vez: ponha os 5 números na ordem certa,
+# numa lista. Formato: [3, 1, 2, 5, 4]
 ordem = None
 assert ordem is not None, (
     "Troque o None por uma lista com os 5 números.")

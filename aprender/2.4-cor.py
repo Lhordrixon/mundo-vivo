@@ -22,8 +22,8 @@ print("A cor de hoje:")
 barras(cores["SEEKING_MATE"])
 
 # --- ✏️ MUDAR ---
-# Escolha a cor nova de SEEKING_MATE: uma lista
-# com 3 números de 0 a 1. Formato: [0.1, 0.2, 0.3]
+# ✏️ Sua vez: a cor nova de SEEKING_MATE, uma
+# lista com 3 números de 0 a 1: [0.1, 0.2, 0.3]
 nova = None
 assert nova is not None, "Troque o None da nova cor."
 for valor in nova:
@@ -41,8 +41,9 @@ barras(nova)
 
 
 # --- ✏️ MONTAR ---
-# Escreva para_java(cor). Ela devolve o texto
-# Java da cor: new Color(0.3f, 0.5f, 1.0f, 1f)
+# ✏️ Sua vez: escreva para_java(cor). Ela devolve
+# o texto Java: new Color(0.3f, 0.5f, 1.0f, 1f)
+# Número com texto precisa de str: str(cor[0])
 def para_java(cor):
     return None
 
