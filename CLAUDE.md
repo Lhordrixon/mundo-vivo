@@ -54,6 +54,8 @@ Cada um foi conferido no código. Não quebre sem discutir antes.
 - Números de progresso só no roadmap.
 - Refatoração estrutural (dividir `Simulation`, criar pacotes, quebrar o
   ciclo) só com aprovação do dono do projeto.
+- PR que cria ou move arquivo Java atualiza o [mapa](aprender/MAPA.md).
+- Mudança em linha Java citada no Nível 2 (`aprender/2.*`) atualiza a aula.
 
 ## Comandos
 

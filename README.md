@@ -1,3 +1,5 @@
+👉 Quer aprender e contribuir? [Comece aqui](aprender/COMECE-AQUI.md)
+
 # Mundo Vivo
 
 [![CI](https://github.com/Lhordrixon/mundo-vivo/actions/workflows/build.yml/badge.svg)](https://github.com/Lhordrixon/mundo-vivo/actions/workflows/build.yml) ![Java 17](https://img.shields.io/badge/Java-17-orange) ![libGDX 1.14.2](https://img.shields.io/badge/libGDX-1.14.2-e74a45) ![Android 8+](https://img.shields.io/badge/Android-8%2B-3ddc84)
